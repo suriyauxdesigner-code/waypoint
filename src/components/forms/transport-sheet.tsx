@@ -12,7 +12,7 @@ import { useActiveTrip, useData, useToday } from "@/lib/store/hooks";
 import { deleteTransport, saveTransport, syncPayment } from "@/lib/store/actions";
 import { MODE_LABEL, journeyWorkOverlap, realCost, ticketCost, travelDurationMin } from "@/lib/calc/transport";
 import { paidFor } from "@/lib/calc/bookings";
-import { absMinutes, fmtDuration } from "@/lib/calc/dates";
+import { absMinutes, addDays, fmtDuration } from "@/lib/calc/dates";
 import { currencySymbol, money } from "@/lib/format";
 import { uid } from "@/lib/utils";
 import type { TransportLeg, TransportMode } from "@/lib/types";
@@ -247,7 +247,22 @@ export function TransportSheet({
 
   const [from, setFrom] = React.useState(existing?.from ?? "");
   const [to, setTo] = React.useState(existing?.to ?? "");
-  const [legs, setLegs] = React.useState<LegDraft[]>(existing ? existing.legs.map(fromLeg) : [blankLeg(startDate)]);
+  const [legs, setLegs] = React.useState<LegDraft[]>(() => {
+    if (existing) return existing.legs.map(fromLeg);
+    const leg = blankLeg(startDate, request.prefill?.from ?? "", request.prefill?.to ?? "");
+    const p = request.prefill;
+    if (p) {
+      if (p.mode) leg.mode = p.mode;
+      if (p.departTime) leg.departTime = p.departTime;
+      if (p.arriveTime) {
+        leg.arriveTime = p.arriveTime;
+        // Arrives earlier on the clock than it left → overnight journey.
+        if (p.departTime && p.arriveTime <= p.departTime) leg.arriveDate = addDays(startDate, 1);
+      }
+      if (p.cost) leg.cost = p.cost;
+    }
+    return [leg];
+  });
   const [extras, setExtras] = React.useState<ExtraDraft[]>(
     existing?.extras.map((e) => ({ id: e.id, label: e.label, amount: String(e.amount) })) ?? [],
   );

@@ -84,6 +84,8 @@ export function useOpenItem() {
 
 function isPast(item: TimelineItem, nowTime?: string) {
   if (!nowTime || !item.time) return false;
+  // Ends after midnight → still running (or upcoming) today.
+  if (item.endTime && toMinutes(item.endTime) < toMinutes(item.time)) return false;
   const end = item.endTime ?? item.time;
   return toMinutes(end) < toMinutes(nowTime);
 }
@@ -340,7 +342,12 @@ function Row({
     if (item.subtitle && item.kind !== "decision") meta.push(item.subtitle);
   }
 
-  const timeLabel = item.time ? (item.endTime && item.kind !== "leg" ? `${item.time} – ${item.endTime}` : item.time) : undefined;
+  const overnight = !!(item.time && item.endTime && toMinutes(item.endTime) < toMinutes(item.time));
+  const timeLabel = item.time
+    ? item.endTime && item.kind !== "leg"
+      ? `${item.time} – ${item.endTime}${overnight ? " next day" : ""}`
+      : item.time
+    : undefined;
   const showStatus = item.status && item.status !== "confirmed" && item.kind !== "check_out";
   const statusTone = item.status === "need_to_book" ? "warning" : item.status === "cancelled" ? "danger" : "neutral";
   const strong = item.kind === "leg" || item.kind === "exam" || item.kind === "decision";

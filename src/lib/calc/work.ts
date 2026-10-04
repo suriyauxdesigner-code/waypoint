@@ -59,6 +59,8 @@ export function eventWorkOverlap(
   defaultDurationMin = 60,
 ): number {
   if (!start) return 0;
+  // An end time earlier than the start means the plan runs past midnight.
+  if (end && toMinutes(end) < toMinutes(start)) return workOverlapMinutes(date, start, addDays(date, 1), end, ws);
   const endT =
     end && toMinutes(end) > toMinutes(start)
       ? end

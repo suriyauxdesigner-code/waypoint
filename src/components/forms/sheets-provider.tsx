@@ -2,7 +2,17 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
-import type { EventType, ISODate } from "@/lib/types";
+import type { EventType, ISODate, TransportMode } from "@/lib/types";
+
+/** Carried over when a plan turns out to be a journey. */
+export interface TransportPrefill {
+  mode?: TransportMode;
+  from?: string;
+  to?: string;
+  departTime?: string;
+  arriveTime?: string;
+  cost?: string;
+}
 
 const ExpenseSheet = dynamic(() => import("./expense-sheet").then((m) => m.ExpenseSheet));
 const EventSheet = dynamic(() => import("./event-sheet").then((m) => m.EventSheet));
@@ -18,7 +28,7 @@ export type SheetRequest =
   | { type: "add-menu" }
   | { type: "expense"; id?: string; date?: ISODate; categoryId?: string }
   | { type: "event"; id?: string; date?: ISODate; eventType?: EventType }
-  | { type: "transport"; id?: string; date?: ISODate }
+  | { type: "transport"; id?: string; date?: ISODate; prefill?: TransportPrefill }
   | { type: "accommodation"; id?: string; date?: ISODate }
   | { type: "booking"; id?: string; date?: ISODate }
   | { type: "phase"; id?: string }

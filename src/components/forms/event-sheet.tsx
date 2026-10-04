@@ -3,7 +3,10 @@
 import * as React from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { StickyNote, Ticket, Trash2 } from "lucide-react";
+import { ArrowRight, Bed, StickyNote, Ticket, Trash2 } from "lucide-react";
+import { MODE_ICONS } from "@/components/common/icons";
+import type { TransportMode } from "@/lib/types";
+import { useSheets, type TransportPrefill } from "./sheets-provider";
 import { ResponsiveSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/label";
@@ -19,6 +22,34 @@ import { currencySymbol } from "@/lib/format";
 import type { BookingStatus, EventType } from "@/lib/types";
 import { BookingFields, ChoiceChips, FieldRow, MoreDetails, WorkConflictNotice, type BookingFieldValues } from "./shared";
 import type { SheetRequest } from "./sheets-provider";
+
+const MODE_WORDS: [RegExp, TransportMode][] = [
+  [/\b(train|rail|express)\b/i, "train"],
+  [/\b(flight|fly|plane|airport)\b/i, "flight"],
+  [/\b(bus|coach|volvo|ksrtc)\b/i, "bus"],
+  [/\b(ferry|boat)\b/i, "ferry"],
+  [/\b(cab|taxi|uber|ola)\b/i, "cab"],
+  [/\b(auto|rickshaw|tuk)\b/i, "auto"],
+  [/\b(metro)\b/i, "metro"],
+  [/\b(scooter|bike|motorbike)\b/i, "scooter"],
+];
+
+/** "Bangalore to Kochi train travel" → { from: Bangalore, to: Kochi, mode: train }. */
+export function guessJourney(title: string): TransportPrefill | null {
+  const mode = MODE_WORDS.find(([re]) => re.test(title))?.[1];
+  const m = title.match(/^\s*(?:(?:train|bus|flight|cab|ferry|travel)\s+(?:from\s+)?)?(?:from\s+)?(.+?)\s+(?:to|→|->|-)\s+(.+?)\s*$/i);
+  // Only suggest when the title clearly talks about getting somewhere.
+  if (!mode && !/\b(travel|journey|transfer)\b/i.test(title)) return null;
+  const strip = (s: string) =>
+    s
+      .replace(/\b(by|via|on|the)?\s*(train|rail|express|flight|bus|coach|ferry|boat|cab|taxi|auto|metro|travel|journey|trip|ride)\b/gi, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  const from = m ? strip(m[1]) : undefined;
+  const to = m ? strip(m[2]) : undefined;
+  if (!mode && !(from && to)) return null;
+  return { mode, from: from || undefined, to: to || undefined };
+}
 import { paidFor } from "@/lib/calc/bookings";
 import { toMinutes } from "@/lib/calc/dates";
 
@@ -39,8 +70,8 @@ const schema = z
   })
   .superRefine((v, ctx) => {
     if (!v.anytime && !v.startTime) ctx.addIssue({ code: "custom", path: ["startTime"], message: "Add a start time or choose Anytime" });
-    if (!v.anytime && v.startTime && v.endTime && toMinutes(v.endTime) <= toMinutes(v.startTime))
-      ctx.addIssue({ code: "custom", path: ["endTime"], message: "End must be after start" });
+    if (!v.anytime && v.startTime && v.endTime && v.endTime === v.startTime)
+      ctx.addIssue({ code: "custom", path: ["endTime"], message: "End can’t be the same as start" });
     if (v.cost && (Number.isNaN(Number(v.cost)) || Number(v.cost) < 0)) ctx.addIssue({ code: "custom", path: ["cost"], message: "Enter a valid amount" });
   });
 
@@ -56,6 +87,7 @@ export function EventSheet({
   const data = useData();
   const trip = useActiveTrip();
   const { today } = useToday();
+  const sheets = useSheets();
   const existing = request.id ? data.events.find((e) => e.id === request.id) : undefined;
   const startRef = React.useRef<HTMLInputElement>(null);
   const initialDate =
@@ -150,6 +182,21 @@ export function EventSheet({
   const needsChoice = overlap > 0 && !ack;
 
   const TypeIcon = EVENT_ICONS[values.type] ?? (isNote ? StickyNote : Ticket);
+  const overnight = !values.anytime && !!values.startTime && !!values.endTime && toMinutes(values.endTime) < toMinutes(values.startTime);
+  const journey = !existing && !isNote ? guessJourney(values.title) : null;
+
+  /** Hand the details typed so far over to the transport form. */
+  const asTransport = () =>
+    sheets.open({
+      type: "transport",
+      date: values.date,
+      prefill: {
+        ...(journey ?? {}),
+        departTime: values.anytime ? undefined : values.startTime || undefined,
+        arriveTime: values.anytime ? undefined : values.endTime || undefined,
+        cost: values.cost || undefined,
+      },
+    });
 
   return (
     <ResponsiveSheet
@@ -175,9 +222,19 @@ export function EventSheet({
       <form id="event-form" onSubmit={submit} className="grid grid-cols-1 gap-5" noValidate>
         <ChoiceChips
           label="Type"
-          value={values.type}
-          onChange={(t) => set("type", t)}
-          options={TYPES.map((t) => ({ value: t, label: EVENT_TYPE_LABEL[t], icon: EVENT_ICONS[t] }))}
+          value={values.type as string}
+          onChange={(t) => {
+            if (t === "transport") return asTransport();
+            if (t === "stay") return sheets.open({ type: "accommodation", date: values.date });
+            set("type", t as EventType);
+          }}
+          options={[
+            ...(existing ? [] : [
+              { value: "transport", label: "Transport", icon: MODE_ICONS.train },
+              { value: "stay", label: "Stay", icon: Bed },
+            ]),
+            ...TYPES.map((t) => ({ value: t as string, label: EVENT_TYPE_LABEL[t], icon: EVENT_ICONS[t] })),
+          ]}
         />
 
         <Field label={isNote ? "Note" : "What"} htmlFor="ev-title" error={errors.title}>
@@ -190,6 +247,22 @@ export function EventSheet({
             onChange={(e) => set("title", e.target.value)}
           />
         </Field>
+
+        {journey && (
+          <button
+            type="button"
+            onClick={asTransport}
+            className="-mt-2 flex items-center gap-3 rounded-2xl bg-accent-soft px-4 py-3 text-left text-[14px] text-accent-foreground transition-colors hover:bg-accent-soft/70"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block font-medium">This looks like a journey</span>
+              <span className="block text-[13px] opacity-80">
+                Add it as transport{journey.from && journey.to ? ` — ${journey.from} → ${journey.to}` : ""} to track tickets and bookings
+              </span>
+            </span>
+            <ArrowRight className="size-4 shrink-0" />
+          </button>
+        )}
 
         <Field label="Date" htmlFor="ev-date" error={errors.date} hint={outsideTrip ? "Outside your trip dates" : undefined}>
           <Input id="ev-date" type="date" value={values.date} min={trip.startDate} max={trip.endDate} onChange={(e) => set("date", e.target.value)} />
@@ -208,7 +281,7 @@ export function EventSheet({
               <Field label="Starts" htmlFor="ev-start" error={errors.startTime}>
                 <Input id="ev-start" ref={startRef} type="time" value={values.startTime} aria-invalid={!!errors.startTime} onChange={(e) => set("startTime", e.target.value)} />
               </Field>
-              <Field label="Ends" htmlFor="ev-end" optional error={errors.endTime}>
+              <Field label="Ends" htmlFor="ev-end" optional error={errors.endTime} hint={overnight ? "Ends the next day" : undefined}>
                 <Input id="ev-end" type="time" value={values.endTime} aria-invalid={!!errors.endTime} onChange={(e) => set("endTime", e.target.value)} />
               </Field>
             </FieldRow>

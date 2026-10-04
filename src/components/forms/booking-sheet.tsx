@@ -3,7 +3,7 @@
 import * as React from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Bed, TrainFront, Ticket, FileText, Trash2 } from "lucide-react";
+import { Bed, CalendarCheck, TrainFront, Ticket, FileText, Trash2 } from "lucide-react";
 import { ResponsiveSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/label";
@@ -15,7 +15,7 @@ import { useZodForm } from "@/lib/use-form";
 import { paidFor } from "@/lib/calc/bookings";
 import { currencySymbol } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { BookingFields, type BookingFieldValues } from "./shared";
+import { BookingRefFields, BookingStatusField, FieldRow, MoreDetails, PlannedActualFields, type BookingFieldValues } from "./shared";
 import { useSheets, type SheetRequest } from "./sheets-provider";
 
 const schema = z
@@ -46,6 +46,7 @@ export function BookingSheet({
   const existing = request.id ? data.bookings.find((b) => b.id === request.id) : undefined;
   const start = request.date ?? (trip && today >= trip.startDate && today <= trip.endDate ? today : trip?.startDate ?? today);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [more, setMore] = React.useState(!!existing && (!!existing.location || !!existing.notes || !!existing.endDate || !!existing.booking.reference));
 
   const form = useZodForm(schema, {
     title: existing?.title ?? "",
@@ -71,10 +72,6 @@ export function BookingSheet({
 
   const submit = form.handleSubmit((v) => {
     const paid = Number(booking.paid) || 0;
-    if (paid > price) {
-      form.setErrors({ paid: "Paid can't exceed the price" });
-      return;
-    }
     const id = saveBooking({
       id: existing?.id,
       tripId: trip.id,
@@ -103,7 +100,10 @@ export function BookingSheet({
       <ResponsiveSheet
         open={open}
         onOpenChange={onOpenChange}
-        title={existing ? "Edit booking" : "Add booking"}
+        icon={CalendarCheck}
+        iconTone="accent"
+        title={existing ? "Edit booking" : "Add a booking"}
+        description="Tickets, tours, passes, fees"
         footer={
           <>
             {existing && (
@@ -112,63 +112,73 @@ export function BookingSheet({
               </Button>
             )}
             <Button type="submit" form="bk-form" size="lg" className="lg:h-10">
-              {existing ? "Save changes" : "Add booking"}
+              {existing ? "Save" : "Add booking"}
             </Button>
           </>
         }
       >
         <form id="bk-form" onSubmit={submit} className="grid grid-cols-1 gap-5" noValidate>
           {!existing && (
-            <div className="grid grid-cols-1 gap-2">
-              <span className="text-[13px] font-medium">What are you booking?</span>
-              <div className="grid grid-cols-4 gap-1.5">
-                {[
-                  { k: "stay", label: "Stay", icon: Bed, onClick: () => sheets.open({ type: "accommodation", date: values.date }) },
-                  { k: "transport", label: "Transport", icon: TrainFront, onClick: () => sheets.open({ type: "transport", date: values.date }) },
-                  { k: "activity", label: "Activity", icon: Ticket, onClick: () => set("kind", "activity") },
-                  { k: "other", label: "Other", icon: FileText, onClick: () => set("kind", "other") },
-                ].map((o) => {
-                  const on = values.kind === o.k;
-                  return (
-                    <button
-                      key={o.k}
-                      type="button"
-                      onClick={o.onClick}
-                      aria-pressed={on}
-                      className={cn(
-                        "flex h-16 flex-col items-center justify-center gap-1 rounded-lg border text-[12px] font-medium transition-colors",
-                        on ? "border-primary bg-primary text-primary-foreground" : "bg-surface hover:bg-muted",
-                      )}
-                    >
-                      <o.icon className="size-4" />
-                      {o.label}
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="grid grid-cols-4 gap-2" role="group" aria-label="What are you booking?">
+              {[
+                { k: "stay", label: "Stay", icon: Bed, onClick: () => sheets.open({ type: "accommodation", date: values.date }) },
+                { k: "transport", label: "Transport", icon: TrainFront, onClick: () => sheets.open({ type: "transport", date: values.date }) },
+                { k: "activity", label: "Activity", icon: Ticket, onClick: () => set("kind", "activity") },
+                { k: "other", label: "Other", icon: FileText, onClick: () => set("kind", "other") },
+              ].map((o) => {
+                const on = values.kind === o.k;
+                return (
+                  <button
+                    key={o.k}
+                    type="button"
+                    onClick={o.onClick}
+                    aria-pressed={on}
+                    className={cn(
+                      "flex h-[68px] flex-col items-center justify-center gap-1.5 rounded-2xl border text-[13px] font-medium transition-colors",
+                      on ? "border-primary bg-primary text-primary-foreground" : "bg-surface hover:bg-muted",
+                    )}
+                  >
+                    <o.icon className="size-5" />
+                    {o.label}
+                  </button>
+                );
+              })}
             </div>
           )}
-          <Field label="Name" htmlFor="bk-title" error={errors.title}>
+          <Field label="What" htmlFor="bk-title" error={errors.title}>
             <Input id="bk-title" placeholder="e.g. Houseboat day cruise" value={values.title} aria-invalid={!!errors.title} onChange={(e) => set("title", e.target.value)} />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Date" htmlFor="bk-date" error={errors.date}>
-              <Input id="bk-date" type="date" value={values.date} onChange={(e) => set("date", e.target.value)} />
-            </Field>
-            <Field label="Until" htmlFor="bk-end" optional error={errors.endDate}>
-              <Input id="bk-end" type="date" value={values.endDate} aria-invalid={!!errors.endDate} onChange={(e) => set("endDate", e.target.value)} />
-            </Field>
-            <Field label="Location" htmlFor="bk-loc" optional>
-              <Input id="bk-loc" value={values.location} onChange={(e) => set("location", e.target.value)} />
-            </Field>
-            <Field label="Price" htmlFor="bk-price" error={errors.price}>
-              <MoneyInput id="bk-price" symbol={symbol} placeholder="0" value={values.price} onChange={(e) => set("price", e.target.value)} />
-            </Field>
-          </div>
-          <BookingFields values={booking} set={(k, v) => setBooking((b) => ({ ...b, [k]: v }))} total={price} symbol={symbol} idPrefix="bk" errors={errors} />
-          <Field label="Notes" htmlFor="bk-notes" optional>
-            <Textarea id="bk-notes" rows={2} value={values.notes} onChange={(e) => set("notes", e.target.value)} />
+          <Field label="Date" htmlFor="bk-date" error={errors.date}>
+            <Input id="bk-date" type="date" value={values.date} onChange={(e) => set("date", e.target.value)} />
           </Field>
+          <BookingStatusField value={booking.status} onChange={(st) => setBooking((b) => ({ ...b, status: st }))} />
+          <PlannedActualFields
+            planned={price}
+            paid={booking.paid}
+            onPaid={(v) => setBooking((b) => ({ ...b, paid: v }))}
+            symbol={symbol}
+            idPrefix="bk"
+            error={errors.paid}
+            plannedSlot={
+              <Field label="Planned price" htmlFor="bk-price" error={errors.price}>
+                <MoneyInput id="bk-price" symbol={symbol} placeholder="0" value={values.price} onChange={(e) => set("price", e.target.value)} />
+              </Field>
+            }
+          />
+          <MoreDetails open={more || !!errors.endDate} onToggle={() => setMore((m) => !m)} summary="End date, location, reference, notes">
+            <FieldRow>
+              <Field label="Until" htmlFor="bk-end" optional error={errors.endDate}>
+                <Input id="bk-end" type="date" value={values.endDate} aria-invalid={!!errors.endDate} onChange={(e) => set("endDate", e.target.value)} />
+              </Field>
+              <Field label="Location" htmlFor="bk-loc" optional>
+                <Input id="bk-loc" value={values.location} onChange={(e) => set("location", e.target.value)} />
+              </Field>
+            </FieldRow>
+            <BookingRefFields values={booking} set={(k, v) => setBooking((b) => ({ ...b, [k]: v }))} idPrefix="bk" />
+            <Field label="Notes" htmlFor="bk-notes" optional>
+              <Textarea id="bk-notes" rows={2} value={values.notes} onChange={(e) => set("notes", e.target.value)} />
+            </Field>
+          </MoreDetails>
         </form>
       </ResponsiveSheet>
       <ConfirmDialog

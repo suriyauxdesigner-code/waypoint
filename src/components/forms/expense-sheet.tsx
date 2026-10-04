@@ -3,7 +3,8 @@
 import * as React from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ChevronDown, Link2, Paperclip, Trash2, X } from "lucide-react";
+import { Link2, Paperclip, Receipt, Trash2, X } from "lucide-react";
+import { ChoiceChips, MoreDetails } from "./shared";
 import { ResponsiveSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/label";
@@ -59,7 +60,7 @@ export function ExpenseSheet({
   const categories = trip ? categoriesForTrip(data, trip.id) : [];
   const phases = trip ? phasesForTrip(data, trip.id) : [];
   const defaultDate = existing?.date ?? request.date ?? today;
-  const [more, setMore] = React.useState(!!existing);
+  const [more, setMore] = React.useState(!!existing && (!!existing.location || !!existing.notes || !!existing.receiptName));
   const amountRef = React.useRef<HTMLInputElement>(null);
 
   const form = useZodForm(schema, {
@@ -120,7 +121,10 @@ export function ExpenseSheet({
     <ResponsiveSheet
       open={open}
       onOpenChange={onOpenChange}
+      icon={Receipt}
+      iconTone="accent"
       title={existing ? "Edit expense" : "Add expense"}
+      description={existing ? undefined : "What did you actually spend?"}
       footer={
         <>
           {existing && (
@@ -140,8 +144,8 @@ export function ExpenseSheet({
           <label htmlFor="exp-amount" className="sr-only">
             Amount
           </label>
-          <div className="flex items-baseline gap-1 border-b pb-2">
-            <span className="text-3xl font-medium text-muted-foreground">{currencySymbol(trip.currency)}</span>
+          <div className="flex items-baseline gap-1.5 rounded-2xl bg-muted px-4 py-3">
+            <span className="text-[28px] font-medium text-muted-foreground">{currencySymbol(trip.currency)}</span>
             <input
               id="exp-amount"
               ref={amountRef}
@@ -152,15 +156,15 @@ export function ExpenseSheet({
               value={values.amount}
               aria-invalid={!!errors.amount}
               onChange={(e) => set("amount", e.target.value)}
-              className="w-full bg-transparent text-[40px] font-semibold tracking-tight tabular outline-none placeholder:text-border-strong"
+              className="w-full min-w-0 bg-transparent text-[40px] font-semibold leading-tight tracking-tight tabular outline-none placeholder:text-subtle-foreground/50"
             />
           </div>
           {errors.amount && <p role="alert" className="mt-1.5 text-[12px] text-danger">{errors.amount}</p>}
         </div>
 
         <div className="grid grid-cols-1 gap-2">
-          <span className="text-[13px] font-medium">Category</span>
-          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4" role="radiogroup" aria-label="Category">
+          <span className="text-[14px] font-medium lg:text-[13px]">Category</span>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4" role="radiogroup" aria-label="Category">
             {categories.map((c) => {
               const on = values.categoryId === c.id;
               return (
@@ -171,12 +175,12 @@ export function ExpenseSheet({
                   aria-checked={on}
                   onClick={() => set("categoryId", c.id)}
                   className={cn(
-                    "flex h-[60px] flex-col items-start justify-between rounded-lg border px-2.5 py-2 text-left text-[12px] leading-tight transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
+                    "flex min-h-16 flex-col items-start justify-between gap-1 rounded-2xl border px-3 py-2.5 text-left text-[13px] leading-tight transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
                     on ? "border-primary bg-primary text-primary-foreground" : "bg-surface hover:bg-muted",
                   )}
                 >
                   <CategoryIcon icon={c.icon} className={cn("size-4", on ? "opacity-90" : "text-muted-foreground")} />
-                  <span className="line-clamp-1 font-medium">{c.name}</span>
+                  <span className="line-clamp-2 font-medium [overflow-wrap:anywhere]">{c.name}</span>
                 </button>
               );
             })}
@@ -185,7 +189,7 @@ export function ExpenseSheet({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Merchant" htmlFor="exp-merchant" optional className="col-span-2 sm:col-span-1">
+          <Field label="What for" htmlFor="exp-merchant" optional className="col-span-2 sm:col-span-1">
             <Input id="exp-merchant" placeholder="e.g. Breakfast, KSRTC" value={values.merchant} onChange={(e) => set("merchant", e.target.value)} />
           </Field>
           <Field label="Date" htmlFor="exp-date" error={errors.date} className="col-span-2 sm:col-span-1">
@@ -193,43 +197,17 @@ export function ExpenseSheet({
           </Field>
         </div>
 
-        <div className="grid grid-cols-1 gap-2">
-          <span className="text-[13px] font-medium">Paid with</span>
-          <div className="flex flex-wrap gap-1.5">
-            {PAYMENT_METHODS.map((m) => (
-              <button
-                key={m.value}
-                type="button"
-                aria-pressed={values.paymentMethod === m.value}
-                onClick={() => set("paymentMethod", m.value)}
-                className={cn(
-                  "h-9 rounded-full border px-3.5 text-[13px] font-medium transition-colors",
-                  values.paymentMethod === m.value ? "border-primary bg-primary text-primary-foreground" : "bg-surface hover:bg-muted",
-                )}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {linkedLabel && (
-          <p className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2.5 text-[13px] text-muted-foreground">
+          <p className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-3 text-[14px] text-muted-foreground">
             <Link2 className="size-4 shrink-0" /> Payment for <span className="font-medium text-foreground">{linkedLabel}</span>
           </p>
         )}
 
-        <button
-          type="button"
-          onClick={() => setMore((m) => !m)}
-          className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground"
-          aria-expanded={more}
-        >
-          <ChevronDown className={cn("size-4 transition-transform", more && "rotate-180")} /> More details
-        </button>
-
-        {more && (
-          <div className="grid grid-cols-1 gap-4">
+        <MoreDetails open={more} onToggle={() => setMore((m) => !m)} summary="Paid with, location, trip phase, notes, receipt">
+            <div className="grid gap-2">
+              <span className="text-[14px] font-medium lg:text-[13px]">Paid with</span>
+              <ChoiceChips label="Paid with" wrap value={values.paymentMethod} onChange={(v) => set("paymentMethod", v)} options={PAYMENT_METHODS} />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Location" htmlFor="exp-loc" optional>
                 <Input id="exp-loc" placeholder="City or place" value={values.location} onChange={(e) => set("location", e.target.value)} />
@@ -249,9 +227,9 @@ export function ExpenseSheet({
               <Textarea id="exp-notes" rows={2} value={values.notes} onChange={(e) => set("notes", e.target.value)} />
             </Field>
             <div className="grid grid-cols-1 gap-1.5">
-              <span className="text-[13px] font-medium">Receipt</span>
+              <span className="text-[14px] font-medium lg:text-[13px]">Receipt</span>
               {values.receiptName ? (
-                <div className="flex items-center justify-between rounded-lg border px-3 py-2 text-[13px]">
+                <div className="flex items-center justify-between rounded-xl border px-3 py-2 text-[14px]">
                   <span className="flex min-w-0 items-center gap-2">
                     <Paperclip className="size-4 shrink-0 text-muted-foreground" />
                     <span className="truncate">{values.receiptName}</span>
@@ -261,7 +239,7 @@ export function ExpenseSheet({
                   </Button>
                 </div>
               ) : (
-                <label className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed text-[13px] text-muted-foreground transition-colors hover:bg-muted">
+                <label className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed text-[14px] text-muted-foreground transition-colors hover:bg-muted">
                   <Paperclip className="size-4" /> Attach receipt
                   <input
                     type="file"
@@ -274,10 +252,9 @@ export function ExpenseSheet({
                   />
                 </label>
               )}
-              <p className="text-[12px] text-subtle-foreground">Stored as a file name for now — receipt sync arrives with cloud backup.</p>
+              <p className="text-[13px] text-muted-foreground">Stored as a file name for now — receipt sync arrives with cloud backup.</p>
             </div>
-          </div>
-        )}
+        </MoreDetails>
       </form>
     </ResponsiveSheet>
   );

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { Scale } from "lucide-react";
 import { ResponsiveSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/label";
@@ -50,14 +51,16 @@ export function NewDecisionSheet({ onClose }: { onClose: () => void }) {
       open={open}
       onOpenChange={close}
       title="Compare ways to travel"
-      description="Add a route, then compare bus, train, flight or combinations side by side."
+      description="Not sure how to get there? Compare options"
+      icon={Scale}
+      iconTone="accent"
       footer={
         <Button type="submit" form="dec-form" size="lg" className="lg:h-10">
           Start comparing
         </Button>
       }
     >
-      <form id="dec-form" onSubmit={submit} className="grid grid-cols-2 gap-3" noValidate>
+      <form id="dec-form" onSubmit={submit} className="grid grid-cols-2 gap-4" noValidate>
         <Field label="From" htmlFor="dec-from" error={errors.from}>
           <Input id="dec-from" autoFocus value={from} aria-invalid={!!errors.from} onChange={(e) => setFrom(e.target.value)} placeholder="e.g. Varkala" />
         </Field>

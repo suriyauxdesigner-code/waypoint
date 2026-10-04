@@ -25,12 +25,12 @@ import type { CurrencyCode, TripPurpose, WorkSchedule } from "@/lib/types";
 
 function Section({ id, title, description, children }: { id?: string; title: string; description?: string; children: React.ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-6 grid gap-4 border-t py-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-10">
-      <div>
-        <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
-        {description && <p className="mt-1 text-[13px] text-muted-foreground">{description}</p>}
+    <section id={id} className="scroll-mt-6">
+      <div className="mb-3 px-1">
+        <h2 className="text-[17px] font-semibold tracking-tight">{title}</h2>
+        {description && <p className="mt-0.5 text-[14px] text-muted-foreground">{description}</p>}
       </div>
-      <div className="min-w-0 max-w-xl">{children}</div>
+      <div className="card min-w-0 p-4 lg:p-5">{children}</div>
     </section>
   );
 }
@@ -107,10 +107,10 @@ function SettingsForm() {
 
   return (
     <div>
-      <PageHeader eyebrow="Settings" title="Settings" />
+      <PageHeader title="Settings" description="Trip details, preferences and your data" />
 
-      <div className="mt-6">
-        <Section title="You" description="Used for greetings.">
+      <div className="mt-8 grid max-w-2xl grid-cols-1 gap-8">
+        <Section title="You" description="Used for greetings">
           <form
             className="flex gap-2"
             onSubmit={(e) => {
@@ -127,7 +127,7 @@ function SettingsForm() {
           </form>
         </Section>
 
-        <Section title="Trip" description="Basics for the trip you’re viewing.">
+        <Section title="This trip" description="Name, dates, currency and total budget">
           <form onSubmit={saveTrip} className="grid grid-cols-1 gap-4" noValidate>
             <div className="grid grid-cols-[72px_1fr] gap-3">
               <Field label="Icon" htmlFor="t-emoji">
@@ -166,7 +166,7 @@ function SettingsForm() {
             <Field label="Total budget" htmlFor="t-budget" error={tripErrors.budget}>
               <MoneyInput id="t-budget" value={budget} onChange={(e) => setBudget(e.target.value)} />
             </Field>
-            <div className="flex justify-between gap-2">
+            <div className="flex justify-between gap-2 border-t pt-4">
               <Button variant="destructive-ghost" onClick={() => setConfirm("delete")}>
                 <Trash2 /> Delete trip
               </Button>
@@ -175,25 +175,25 @@ function SettingsForm() {
           </form>
         </Section>
 
-        <Section id="work" title="Work schedule" description="Work hours are blocked on your timeline and factored into transport decisions.">
+        <Section id="work" title="Work schedule" description="Optional — protects work hours if you work while travelling">
           <WorkScheduleEditor value={ws} onChange={setWs} />
           {ws.enabled && ws.daysOff.length > 0 && (
             <div className="mt-5">
-              <p className="text-[13px] font-medium">Days off</p>
+              <p className="text-[14px] font-medium">Days off</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {ws.daysOff.map((d) => (
                   <button
                     key={d}
                     type="button"
                     onClick={() => setWs({ ...ws, daysOff: ws.daysOff.filter((x) => x !== d) })}
-                    className="h-8 rounded-full border px-3 text-[12px] hover:bg-muted"
+                    className="h-9 rounded-full border px-3 text-[13px] hover:bg-muted"
                     aria-label={`Remove day off ${fmtLong(d)}`}
                   >
                     {fmtWeekdayDate(d)} ✕
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-[12px] text-muted-foreground">Add days off from any work block on the timeline.</p>
+              <p className="mt-2 text-[13px] text-muted-foreground">Add days off from any work block on the timeline.</p>
             </div>
           )}
           <Button className="mt-5" onClick={saveWork}>
@@ -201,16 +201,16 @@ function SettingsForm() {
           </Button>
         </Section>
 
-        <Section title="Exams" description="Shown on the timeline and calendar. Weekday exams can be marked as days off from work.">
+        <Section title="Exams" description="Optional — shown on your plan and calendar">
           {exams.length ? (
-            <ul className="divide-y rounded-lg border">
+            <ul className="-mx-4 -mt-4 divide-y border-b lg:-mx-5 lg:-mt-5">
               {exams.map((x) => (
                 <li key={x.id}>
-                  <button type="button" onClick={() => sheets.open({ type: "exam", id: x.id })} className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left hover:bg-muted/50">
+                  <button type="button" onClick={() => sheets.open({ type: "exam", id: x.id })} className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-2 lg:px-5">
                     <GraduationCap className="size-4 text-muted-foreground" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[14px] font-medium">{x.subject}</span>
-                      <span className="text-[12px] text-muted-foreground">
+                      <span className="block truncate text-[15px] font-medium">{x.subject}</span>
+                      <span className="text-[13px] text-muted-foreground">
                         {fmtWeekdayDate(x.date)} · {x.startTime}–{x.endTime}
                         {x.venue ? ` · ${x.venue}` : ""}
                       </span>
@@ -220,19 +220,19 @@ function SettingsForm() {
               ))}
             </ul>
           ) : (
-            <p className="text-[13px] text-muted-foreground">No exams on this trip.</p>
+            <p className="text-[14px] text-muted-foreground">No exams on this trip.</p>
           )}
-          <Button variant="outline" className="mt-3" onClick={() => sheets.open({ type: "exam" })}>
+          <Button variant="outline" className="mt-4" onClick={() => sheets.open({ type: "exam" })}>
             <Plus /> Add exam
           </Button>
         </Section>
 
-        <Section id="date" title="Date" description="Waypoint follows your device clock. For the demo, or to rehearse a day, view the app as another date.">
+        <Section id="date" title="Date" description="Follows your device clock. Preview another day to rehearse it">
           <div className="grid grid-cols-1 gap-4">
             <div className="flex items-center justify-between gap-3">
-              <label htmlFor="sim" className="text-[14px] font-medium">
+              <label htmlFor="sim" className="text-[15px] font-medium">
                 Use real date
-                <span className="block text-[12px] font-normal text-muted-foreground">Today is {fmtWeekdayDate(clock.date)}</span>
+                <span className="block text-[13px] font-normal text-muted-foreground">Today is {fmtWeekdayDate(clock.date)}</span>
               </label>
               <Switch id="sim" checked={!simulated} onCheckedChange={(c) => setSimulatedDate(c ? null : DEMO_TODAY)} />
             </div>
@@ -247,7 +247,7 @@ function SettingsForm() {
               </div>
             )}
             {simulated && (
-              <p className="flex items-center gap-2 text-[12px] text-muted-foreground">
+              <p className="flex items-center gap-2 text-[13px] text-muted-foreground">
                 <CalendarClock className="size-3.5" /> Viewing as {fmtDayMonth(simulated)} — calculations use this date.
               </p>
             )}
@@ -256,6 +256,7 @@ function SettingsForm() {
 
         <Section title="Appearance">
           <Segmented
+            className="w-full sm:w-auto"
             ariaLabel="Theme"
             value={data.settings.theme}
             onChange={setTheme}
@@ -267,7 +268,7 @@ function SettingsForm() {
           />
         </Section>
 
-        <Section title="Your data" description="Everything is stored on this device. The data layer is built so cloud sync can be added without changing screens.">
+        <Section title="Your data" description="Stored on this device. Export a backup any time">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Button variant="outline" onClick={download}>
               <Download /> Export backup

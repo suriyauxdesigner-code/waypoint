@@ -22,10 +22,10 @@ export function ConfirmDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent hideClose className="top-1/2 max-w-sm -translate-y-1/2 p-5">
+      <DialogContent hideClose className="top-1/2 max-w-sm -translate-y-1/2 p-6">
         <DialogTitle>{title}</DialogTitle>
         {description && <DialogDescription className="mt-1.5">{description}</DialogDescription>}
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-6 grid grid-cols-2 gap-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

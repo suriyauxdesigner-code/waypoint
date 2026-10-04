@@ -212,7 +212,7 @@ export function upcomingDeadlines(views: BookingView[], today: ISODate): Deadlin
 }
 
 export const STATUS_LABEL: Record<BookingStatus, string> = {
-  confirmed: "Confirmed",
+  confirmed: "Booked",
   pending: "Pending",
   need_to_book: "Need to book",
   cancelled: "Cancelled",

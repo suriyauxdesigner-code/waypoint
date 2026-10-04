@@ -1,71 +1,64 @@
 "use client";
 
 import Link from "next/link";
-import { Meter } from "@/components/ui/progress";
+import { ChevronRight, Plus } from "lucide-react";
+import { BudgetBar } from "@/components/common/money";
+import { Button } from "@/components/ui/button";
 import type { MoneySummary } from "@/lib/calc/budget";
-import { money, pct } from "@/lib/format";
+import { money } from "@/lib/format";
 import type { CurrencyCode } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-export function BudgetStatus({ m, currency }: { m: MoneySummary; currency: CurrencyCode }) {
+/**
+ * Budget at a glance: Left (hero) → Spent / To pay / Safe per day, then today's spend.
+ * One card — answers "how much do I have left?" and "how am I doing today?".
+ */
+export function BudgetCard({ m, currency, onAdd, showToday = true }: { m: MoneySummary; currency: CurrencyCode; onAdd: () => void; showToday?: boolean }) {
   const expected = m.totalDays > 0 ? m.daysElapsed / m.totalDays : 0;
-  const tone = m.remaining < 0 ? "danger" : m.usedRatio > expected + 0.15 ? "warning" : "default";
-  return (
-    <Link href="/money" className="block rounded-xl border bg-surface p-4 transition-colors hover:border-border-strong">
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="text-[24px] font-semibold tracking-tight tabular">
-          {money(m.spent, currency)}
-          <span className="ml-1.5 text-[13px] font-normal text-muted-foreground">spent</span>
-        </p>
-        <p className="text-[13px] text-muted-foreground tabular">of {money(m.budget, currency)}</p>
-      </div>
-      <Meter value={m.usedRatio} marker={expected} tone={tone} className="mt-3" label="Budget used" />
-      <div className="mt-1.5 flex justify-between text-[11px] text-subtle-foreground">
-        <span>{pct(m.usedRatio)} used</span>
-        <span>tick = {pct(expected)} of trip elapsed</span>
-      </div>
-      <dl className="mt-4 grid grid-cols-2 gap-4 border-t pt-3.5">
-        <div>
-          <dt className="text-[12px] text-muted-foreground">Remaining</dt>
-          <dd className="mt-0.5 text-[16px] font-semibold tabular">{money(m.remaining, currency)}</dd>
-        </div>
-        <div>
-          <dt className="text-[12px] text-muted-foreground">Safe daily spend</dt>
-          <dd className="mt-0.5 text-[16px] font-semibold tabular">
-            {money(m.safeDaily, currency)}
-            <span className="text-[12px] font-normal text-muted-foreground">/day</span>
-          </dd>
-        </div>
-      </dl>
-      {m.committed > 0 && (
-        <p className="mt-3 text-[12px] text-muted-foreground">
-          {money(Math.max(0, m.safeDailyAfterCommitted), currency)}/day after {money(m.committed, currency)} still to pay for bookings
-        </p>
-      )}
-    </Link>
-  );
-}
-
-export function TodaySpend({ m, currency, onAdd }: { m: MoneySummary; currency: CurrencyCode; onAdd: () => void }) {
   const under = m.todayDelta >= 0;
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border bg-surface px-4 py-3">
-      <div>
-        <p className="text-[12px] text-muted-foreground">Spent today</p>
-        <p className="text-[16px] font-semibold tabular">
-          {money(m.spentToday, currency)}
-          <span className="ml-1.5 text-[12px] font-normal text-muted-foreground">of {money(m.todayTarget, currency)}</span>
+    <div className="card">
+      <Link href="/money" className="block px-4 pb-4 pt-4 transition-colors hover:bg-surface-2 lg:px-5">
+        <div className="flex items-center justify-between">
+          <p className="text-[15px] font-medium text-muted-foreground">Budget left</p>
+          <ChevronRight className="size-4 text-subtle-foreground" />
+        </div>
+        <p className="mt-1 text-[32px] font-semibold leading-none tracking-tight tabular">
+          <span className={cn(m.remaining < 0 && "text-danger")}>{money(m.remaining, currency)}</span>
+          <span className="ml-2 text-[15px] font-normal tracking-normal text-muted-foreground">of {money(m.budget, currency)}</span>
         </p>
-        <p className={under ? "text-[12px] text-positive" : "text-[12px] text-danger"}>
-          {money(Math.abs(m.todayDelta), currency)} {under ? "under" : "over"} today’s budget
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={onAdd}
-        className="h-10 rounded-full bg-primary px-4 text-[13px] font-medium text-primary-foreground transition-transform active:scale-95"
-      >
-        + Expense
-      </button>
+        <BudgetBar budget={m.budget} spent={m.spent} committed={m.committed} marker={showToday ? expected : undefined} className="mt-4" />
+        <dl className="mt-4 grid grid-cols-3 gap-3">
+          <div>
+            <dt className="text-[13px] text-muted-foreground">Spent</dt>
+            <dd className="text-[15px] font-semibold tabular">{money(m.spent, currency)}</dd>
+          </div>
+          <div>
+            <dt className="text-[13px] text-muted-foreground">Still to pay</dt>
+            <dd className="text-[15px] font-semibold tabular">{money(m.committed, currency)}</dd>
+          </div>
+          <div>
+            <dt className="text-[13px] text-muted-foreground">Safe / day</dt>
+            <dd className="text-[15px] font-semibold tabular">{money(m.safeDaily, currency)}</dd>
+          </div>
+        </dl>
+      </Link>
+      {showToday && (
+        <div className="flex items-center justify-between gap-3 border-t px-4 py-3 lg:px-5">
+          <div className="min-w-0">
+            <p className="text-[15px]">
+              <span className="font-semibold tabular">{money(m.spentToday, currency)}</span>
+              <span className="text-muted-foreground"> spent today of {money(m.todayTarget, currency)}</span>
+            </p>
+            <p className={cn("text-[13px]", under ? "text-positive" : "text-danger")}>
+              {money(Math.abs(m.todayDelta), currency)} {under ? "under" : "over"} today’s budget
+            </p>
+          </div>
+          <Button size="sm" variant="secondary" onClick={onAdd} className="shrink-0">
+            <Plus /> Expense
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

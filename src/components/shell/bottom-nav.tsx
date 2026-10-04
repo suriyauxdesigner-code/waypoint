@@ -13,11 +13,11 @@ function Tab({ item, active }: { item: NavItem; active: boolean }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors outline-none",
+        "flex h-16 flex-1 flex-col items-center justify-center gap-1 text-[12px] font-medium transition-colors outline-none",
         active ? "text-foreground" : "text-subtle-foreground",
       )}
     >
-      <item.icon className={cn("size-[22px]", active ? "stroke-[2.2]" : "stroke-[1.8]")} />
+      <item.icon className="size-[22px]" strokeWidth={active ? 2.2 : 1.8} />
       {item.label}
     </Link>
   );
@@ -30,7 +30,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-surface/92 backdrop-blur-xl supports-[backdrop-filter]:bg-surface/80 pb-safe lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-surface/95 pb-safe backdrop-blur-xl supports-[backdrop-filter]:bg-surface/85 lg:hidden"
     >
       <div className="mx-auto flex max-w-md items-center px-2">
         <Tab item={a} active={a.match(path)} />
@@ -38,9 +38,9 @@ export function BottomNav() {
         <div className="flex flex-1 justify-center">
           <button
             type="button"
-            aria-label="Add"
+            aria-label="Add to trip"
             onClick={() => sheets.open({ type: "add-menu" })}
-            className="grid size-12 -translate-y-1 place-content-center rounded-full bg-primary text-primary-foreground shadow-[0_6px_16px_-4px_rgb(0_0_0/0.35)] transition-transform active:scale-95 outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+            className="grid size-[52px] place-content-center rounded-full bg-primary text-primary-foreground shadow-[0_8px_20px_-6px_rgb(16_24_40/0.45)] transition-transform outline-none active:scale-95 focus-visible:ring-[3px] focus-visible:ring-ring"
           >
             <Plus className="size-6" strokeWidth={2.2} />
           </button>

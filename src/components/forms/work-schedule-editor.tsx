@@ -25,9 +25,9 @@ export function WorkScheduleEditor({
     <div className="grid grid-cols-1 gap-5">
       {showEnable && (
         <div className="flex items-center justify-between gap-3">
-          <label htmlFor="ws-enabled" className="text-[14px] font-medium">
+          <label htmlFor="ws-enabled" className="text-[15px] font-medium">
             I’m working during this trip
-            <span className="block text-[12px] font-normal text-muted-foreground">Blocks work hours on your timeline</span>
+            <span className="block text-[13px] font-normal text-muted-foreground">Blocks work hours on your plan</span>
           </label>
           <Switch id="ws-enabled" checked={value.enabled} onCheckedChange={(c) => set("enabled", c)} />
         </div>
@@ -35,8 +35,8 @@ export function WorkScheduleEditor({
       {value.enabled && (
         <>
           <div className="grid grid-cols-1 gap-2">
-            <span className="text-[13px] font-medium">Work days</span>
-            <div className="flex gap-1.5">
+            <span className="text-[14px] font-medium">Work days</span>
+            <div className="grid grid-cols-7 gap-1.5 sm:flex">
               {WEEKDAY_LABELS.map((d) => {
                 const on = value.days.includes(d.value);
                 return (
@@ -47,8 +47,8 @@ export function WorkScheduleEditor({
                     aria-label={d.long}
                     onClick={() => set("days", on ? value.days.filter((x) => x !== d.value) : [...value.days, d.value])}
                     className={cn(
-                      "grid size-10 place-content-center rounded-full border text-[13px] font-medium transition-colors",
-                      on ? "border-primary bg-primary text-primary-foreground" : "bg-surface text-muted-foreground hover:bg-muted",
+                      "grid aspect-square place-content-center rounded-full border text-[13px] font-medium transition-colors sm:size-10",
+                      on ? "border-accent bg-accent text-white" : "bg-surface text-muted-foreground hover:bg-muted",
                     )}
                   >
                     {d.long.slice(0, 2)}
@@ -65,7 +65,7 @@ export function WorkScheduleEditor({
               <Input id="ws-end" type="time" value={value.end} aria-invalid={invalid} onChange={(e) => set("end", e.target.value)} />
             </Field>
           </div>
-          <div className="divide-y rounded-lg border">
+          <div className="divide-y rounded-2xl border">
             {(
               [
                 ["protectWorkHours", "Protect work hours", "Warn when plans overlap work"],
@@ -74,10 +74,10 @@ export function WorkScheduleEditor({
                 ["showWorkspaceStays", "Highlight workspace-friendly stays", "Desk and Wi-Fi up front in Bookings"],
               ] as const
             ).map(([key, label, hint]) => (
-              <div key={key} className="flex items-center justify-between gap-3 px-3.5 py-3">
-                <label htmlFor={`ws-${key}`} className="text-[13px] font-medium">
+              <div key={key} className="flex items-center justify-between gap-3 px-4 py-3">
+                <label htmlFor={`ws-${key}`} className="text-[15px] font-medium">
                   {label}
-                  <span className="block text-[12px] font-normal text-muted-foreground">{hint}</span>
+                  <span className="block text-[13px] font-normal text-muted-foreground">{hint}</span>
                 </label>
                 <Switch id={`ws-${key}`} checked={value[key]} onCheckedChange={(c) => set(key, c)} />
               </div>

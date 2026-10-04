@@ -3,7 +3,7 @@
 import * as React from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Laptop, Trash2, WashingMachine, Wifi } from "lucide-react";
+import { Bed, Laptop, Trash2, WashingMachine, Wifi } from "lucide-react";
 import { ResponsiveSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/label";
@@ -17,7 +17,7 @@ import { paidFor } from "@/lib/calc/bookings";
 import { nights as countNights } from "@/lib/calc/trip";
 import { addDays } from "@/lib/calc/dates";
 import { currencySymbol, money } from "@/lib/format";
-import { BookingFields, SectionLabel, type BookingFieldValues } from "./shared";
+import { BookingRefFields, BookingStatusField, FieldRow, MoreDetails, PlannedActualFields, type BookingFieldValues } from "./shared";
 import type { SheetRequest } from "./sheets-provider";
 
 const schema = z
@@ -56,6 +56,7 @@ export function AccommodationSheet({
   const existing = request.id ? data.accommodations.find((a) => a.id === request.id) : undefined;
   const start = request.date ?? (trip && today >= trip.startDate && today <= trip.endDate ? today : trip?.startDate ?? today);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [more, setMore] = React.useState(!!existing && (!!existing.address || !!existing.notes || !!existing.booking.reference || !!existing.mapUrl));
 
   const form = useZodForm(schema, {
     property: existing?.property ?? "",
@@ -92,10 +93,6 @@ export function AccommodationSheet({
 
   const submit = form.handleSubmit((v) => {
     const paid = Number(booking.paid) || 0;
-    if (paid > total) {
-      form.setErrors({ paid: "Paid can't exceed the total" });
-      return;
-    }
     const id = saveAccommodation({
       id: existing?.id,
       tripId: trip.id,
@@ -132,16 +129,16 @@ export function AccommodationSheet({
   });
 
   const workRows = (
-    <div className="divide-y rounded-lg border">
-      <div className="px-3.5 py-3">
+    <div className="divide-y rounded-2xl border">
+      <div className="px-4 py-3">
         <div className="flex items-center justify-between gap-3">
-          <label htmlFor="acc-wifi" className="flex items-center gap-2 text-[13px] font-medium">
+          <label htmlFor="acc-wifi" className="flex items-center gap-2 text-[15px] font-medium">
             <Wifi className="size-4 text-muted-foreground" /> Wi-Fi
           </label>
           <Switch id="acc-wifi" checked={values.wifi} onCheckedChange={(c) => set("wifi", c)} />
         </div>
         {values.wifi && (
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Field label="Speed (Mbps)" htmlFor="acc-wifi-speed">
               <Input id="acc-wifi-speed" inputMode="numeric" placeholder="e.g. 40" value={values.wifiSpeed} onChange={(e) => set("wifiSpeed", e.target.value.replace(/[^0-9]/g, ""))} />
             </Field>
@@ -154,14 +151,14 @@ export function AccommodationSheet({
           </div>
         )}
       </div>
-      <div className="flex items-center justify-between gap-3 px-3.5 py-3">
-        <label htmlFor="acc-ws" className="flex items-center gap-2 text-[13px] font-medium">
+      <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <label htmlFor="acc-ws" className="flex items-center gap-2 text-[15px] font-medium">
           <Laptop className="size-4 text-muted-foreground" /> Workspace / desk
         </label>
         <Switch id="acc-ws" checked={values.workspace} onCheckedChange={(c) => set("workspace", c)} />
       </div>
-      <div className="flex items-center justify-between gap-3 px-3.5 py-3">
-        <label htmlFor="acc-laundry" className="flex items-center gap-2 text-[13px] font-medium">
+      <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <label htmlFor="acc-laundry" className="flex items-center gap-2 text-[15px] font-medium">
           <WashingMachine className="size-4 text-muted-foreground" /> Laundry
         </label>
         <Switch id="acc-laundry" checked={values.laundry} onCheckedChange={(c) => set("laundry", c)} />
@@ -175,7 +172,10 @@ export function AccommodationSheet({
         open={open}
         onOpenChange={onOpenChange}
         wide
-        title={existing ? "Edit stay" : "Add accommodation"}
+        icon={Bed}
+        iconTone="accent"
+        title={existing ? "Edit stay" : "Add a stay"}
+        description={existing ? `${existing.property} · ${existing.city}` : "Hostel, hotel, homestay"}
         footer={
           <>
             {existing && (
@@ -184,69 +184,58 @@ export function AccommodationSheet({
               </Button>
             )}
             <Button type="submit" form="acc-form" size="lg" className="lg:h-10">
-              {existing ? "Save changes" : "Add stay"}
+              {existing ? "Save" : "Add stay"}
             </Button>
           </>
         }
       >
         <form id="acc-form" onSubmit={submit} className="grid grid-cols-1 gap-5" noValidate>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Property" htmlFor="acc-prop" error={errors.property} className="col-span-2 sm:col-span-1">
-              <Input id="acc-prop" autoFocus={!existing} placeholder="e.g. Varkala Hostel" value={values.property} aria-invalid={!!errors.property} onChange={(e) => set("property", e.target.value)} />
-            </Field>
-            <Field label="City" htmlFor="acc-city" error={errors.city} className="col-span-2 sm:col-span-1">
-              <Input id="acc-city" placeholder="e.g. Varkala" value={values.city} aria-invalid={!!errors.city} onChange={(e) => set("city", e.target.value)} />
-            </Field>
+          <Field label="Where are you staying?" htmlFor="acc-prop" error={errors.property}>
+            <Input id="acc-prop" autoFocus={!existing} placeholder="e.g. Zostel Varkala" value={values.property} aria-invalid={!!errors.property} onChange={(e) => set("property", e.target.value)} />
+          </Field>
+          <Field label="City" htmlFor="acc-city" error={errors.city}>
+            <Input id="acc-city" placeholder="e.g. Varkala" value={values.city} aria-invalid={!!errors.city} onChange={(e) => set("city", e.target.value)} />
+          </Field>
+          <FieldRow>
             <Field label="Check-in" htmlFor="acc-in" error={errors.checkIn}>
-              <div className="grid grid-cols-[1fr_auto] gap-1.5">
-                <Input id="acc-in" type="date" value={values.checkIn} onChange={(e) => set("checkIn", e.target.value)} />
-                <Input aria-label="Check-in time" type="time" className="w-[118px]" value={values.checkInTime} onChange={(e) => set("checkInTime", e.target.value)} />
-              </div>
+              <Input id="acc-in" type="date" value={values.checkIn} onChange={(e) => set("checkIn", e.target.value)} />
             </Field>
             <Field label="Check-out" htmlFor="acc-out" error={errors.checkOut}>
-              <div className="grid grid-cols-[1fr_auto] gap-1.5">
-                <Input id="acc-out" type="date" value={values.checkOut} aria-invalid={!!errors.checkOut} onChange={(e) => set("checkOut", e.target.value)} />
-                <Input aria-label="Check-out time" type="time" className="w-[118px]" value={values.checkOutTime} onChange={(e) => set("checkOutTime", e.target.value)} />
-              </div>
+              <Input id="acc-out" type="date" value={values.checkOut} aria-invalid={!!errors.checkOut} onChange={(e) => set("checkOut", e.target.value)} />
             </Field>
-            <Field label="Price per night" htmlFor="acc-price" error={errors.pricePerNight}>
-              <MoneyInput id="acc-price" symbol={symbol} placeholder="0" value={values.pricePerNight} aria-invalid={!!errors.pricePerNight} onChange={(e) => set("pricePerNight", e.target.value)} />
-            </Field>
-            <div className="grid content-end gap-1 pb-2.5 text-[13px]">
-              <span className="text-muted-foreground">
-                {n} {n === 1 ? "night" : "nights"}
-              </span>
-              <span className="text-[17px] font-semibold tabular">{money(total, trip.currency)}</span>
-            </div>
-          </div>
+          </FieldRow>
+          <Field
+            label="Price per night"
+            htmlFor="acc-price"
+            error={errors.pricePerNight}
+            hint={n > 0 ? `${n} ${n === 1 ? "night" : "nights"} · ${money(total, trip.currency)} planned in total` : undefined}
+          >
+            <MoneyInput id="acc-price" symbol={symbol} placeholder="0" value={values.pricePerNight} aria-invalid={!!errors.pricePerNight} onChange={(e) => set("pricePerNight", e.target.value)} />
+          </Field>
 
-          {workation && (
-            <>
-              <SectionLabel>For working</SectionLabel>
-              {workRows}
-            </>
-          )}
+          <BookingStatusField value={booking.status} onChange={(st) => setBooking((b) => ({ ...b, status: st }))} />
+          <PlannedActualFields planned={total} paid={booking.paid} onPaid={(v) => setBooking((b) => ({ ...b, paid: v }))} symbol={symbol} idPrefix="acc" error={errors.paid} />
 
-          <SectionLabel>Booking</SectionLabel>
-          <BookingFields
-            values={booking}
-            set={(k, v) => setBooking((b) => ({ ...b, [k]: v }))}
-            total={total}
-            symbol={symbol}
-            idPrefix="acc"
-            deadlineLabel={booking.status === "confirmed" ? "Cancellation deadline" : "Book before"}
-            errors={errors}
-          />
-
-          {!workation && (
-            <>
-              <SectionLabel>Amenities</SectionLabel>
-              {workRows}
-            </>
-          )}
-
-          <SectionLabel>Location</SectionLabel>
-          <div className="grid grid-cols-1 gap-3">
+          <MoreDetails
+            open={more || !!errors.mapUrl}
+            onToggle={() => setMore((m) => !m)}
+            summary={workation ? "Wi-Fi & workspace, times, address, booking reference" : "Times, address, map link, Wi-Fi, booking reference"}
+          >
+            <FieldRow>
+              <Field label="Check-in time" htmlFor="acc-in-t">
+                <Input id="acc-in-t" aria-label="Check-in time" type="time" value={values.checkInTime} onChange={(e) => set("checkInTime", e.target.value)} />
+              </Field>
+              <Field label="Check-out time" htmlFor="acc-out-t">
+                <Input id="acc-out-t" aria-label="Check-out time" type="time" value={values.checkOutTime} onChange={(e) => set("checkOutTime", e.target.value)} />
+              </Field>
+            </FieldRow>
+            {workRows}
+            <BookingRefFields
+              values={booking}
+              set={(k, v) => setBooking((b) => ({ ...b, [k]: v }))}
+              idPrefix="acc"
+              deadlineLabel={booking.status === "confirmed" ? "Free cancellation until" : "Book before"}
+            />
             <Field label="Address" htmlFor="acc-addr" optional>
               <Input id="acc-addr" value={values.address} onChange={(e) => set("address", e.target.value)} />
             </Field>
@@ -256,14 +245,14 @@ export function AccommodationSheet({
             <Field label="Notes" htmlFor="acc-notes" optional>
               <Textarea id="acc-notes" rows={3} value={values.notes} onChange={(e) => set("notes", e.target.value)} />
             </Field>
-          </div>
+          </MoreDetails>
         </form>
       </ResponsiveSheet>
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title="Delete this stay?"
-        description="It will be removed from your timeline and bookings. Payments stay in Money, unlinked."
+        description="It will be removed from your plan and bookings. Payments stay in Budget, unlinked."
         onConfirm={() => {
           if (existing) deleteAccommodation(existing.id);
           onOpenChange(false);

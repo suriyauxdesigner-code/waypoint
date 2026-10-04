@@ -35,7 +35,7 @@ export function DailySpendChart({
       <div className="relative">
         {/* target line */}
         <div className="pointer-events-none absolute inset-x-0 z-[1] border-t border-dashed border-foreground/50" style={{ top: y(target) }} aria-hidden>
-          <span className="absolute -top-5 left-0 rounded bg-background/90 px-1 text-[11px] text-muted-foreground tabular">
+          <span className="absolute -top-5 left-0 rounded bg-surface/90 px-1 text-[12px] text-muted-foreground tabular">
             safe {money(target, currency)}/day
           </span>
         </div>
@@ -57,8 +57,8 @@ export function DailySpendChart({
                 <span
                   className={cn(
                     "w-full rounded-t-[4px] transition-colors",
-                    d.date === today ? "bg-signal" : over ? "bg-foreground" : "bg-foreground/55",
-                    hover === i && "bg-foreground",
+                    d.date === today ? "bg-signal" : over ? "bg-accent" : "bg-accent/45",
+                    hover === i && "bg-accent",
                   )}
                   style={{ height: h }}
                 />
@@ -68,7 +68,7 @@ export function DailySpendChart({
         </div>
         {active && hover !== null && (
           <div
-            className="pointer-events-none absolute -top-2 z-10 -translate-x-1/2 -translate-y-full rounded-md border bg-surface px-2.5 py-1.5 text-[12px] shadow-md"
+            className="pointer-events-none absolute -top-2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border bg-surface px-2.5 py-1.5 text-[12px] shadow-md"
             style={{ left: `${((hover + 0.5) / days.length) * 100}%` }}
           >
             <p className="font-medium">
@@ -79,13 +79,13 @@ export function DailySpendChart({
           </div>
         )}
       </div>
-      <div className="mt-1.5 flex justify-between text-[11px] text-muted-foreground tabular">
+      <div className="mt-1.5 flex justify-between text-[12px] text-muted-foreground tabular">
         <span>{fmtDayMonth(days[0].date)}</span>
         <span>{fmtDayMonth(days[days.length - 1].date)}</span>
       </div>
       <figcaption className="mt-2 flex items-center justify-between gap-3 text-[12px] text-muted-foreground">
         <span>
-          Day-to-day spend · <span className="text-signal-foreground">today</span> highlighted · stays & long-distance tickets excluded
+          Excludes stays and long-distance tickets · <span className="text-signal-foreground">today</span> highlighted
         </span>
         <button type="button" className="shrink-0 underline-offset-4 hover:underline" onClick={() => setShowTable((s) => !s)}>
           {showTable ? "Hide table" : "Table"}

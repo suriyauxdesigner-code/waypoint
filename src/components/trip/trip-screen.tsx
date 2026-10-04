@@ -65,25 +65,23 @@ export function TripScreen() {
   return (
     <div>
       <PageHeader
-        eyebrow="Trip"
         title={trip.name}
+        description={`${fmtRange(trip.startDate, trip.endDate)} · ${totalTripDays(trip)} days · ${destinations} ${destinations === 1 ? "place" : "places"}`}
         actions={
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex" onClick={() => setNewDecision(true)}>
+          <Button variant="outline" size="sm" className="hidden lg:inline-flex" onClick={() => setNewDecision(true)}>
             <Scale /> Compare transport
           </Button>
         }
       >
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          {fmtRange(trip.startDate, trip.endDate)} · {totalTripDays(trip)} days · {destinations} places
-          {trip.workSchedule.enabled && (
-            <>
-              {" · "}
-              <button type="button" className="underline-offset-4 hover:underline" onClick={() => sheets.open({ type: "work" })}>
-                Work {describeSchedule(trip.workSchedule)}
-              </button>
-            </>
-          )}
-        </p>
+        {trip.workSchedule.enabled && (
+          <button
+            type="button"
+            className="mt-1 text-[14px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            onClick={() => sheets.open({ type: "work" })}
+          >
+            Working {describeSchedule(trip.workSchedule)}
+          </button>
+        )}
       </PageHeader>
 
       <div className="mt-6">
@@ -91,25 +89,25 @@ export function TripScreen() {
       </div>
 
       <Tabs value={view} onValueChange={setView} className="mt-8">
-        <div className="sticky top-0 z-20 -mx-4 border-b bg-background/95 px-4 pt-2 pb-2 backdrop-blur sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
-          <div className="flex items-center justify-between gap-3">
-            <TabsList className="w-full sm:w-auto">
+        <div className="sticky top-0 z-20 -mx-4 bg-background/90 px-4 pb-3 pt-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
+          <div className="flex items-center gap-2">
+            <TabsList className="flex-1 sm:flex-none">
               <TabsTrigger value="timeline">
-                <List /> Timeline
+                <List /> Days
               </TabsTrigger>
               <TabsTrigger value="calendar">
                 <CalendarDays /> Calendar
               </TabsTrigger>
               <TabsTrigger value="map">
-                <MapIcon /> Map
+                <MapIcon /> Route
               </TabsTrigger>
             </TabsList>
-            <Button variant="outline" size="icon-sm" className="shrink-0 sm:hidden" aria-label="Compare transport" onClick={() => setNewDecision(true)}>
+            <Button variant="outline" size="icon" className="shrink-0 rounded-xl lg:hidden" aria-label="Compare transport options" onClick={() => setNewDecision(true)}>
               <Scale />
             </Button>
           </div>
           {view === "timeline" && (
-            <div className="mt-2">
+            <div className="mt-3">
               <DateStrip trip={trip} today={today} selected={selected} onSelect={pick} />
             </div>
           )}
@@ -117,10 +115,10 @@ export function TripScreen() {
         <TabsContent value="timeline" className="pt-2 outline-none">
           <TripTimeline trip={trip} today={today} focusDate={focus} />
         </TabsContent>
-        <TabsContent value="calendar" className="pt-6 outline-none">
+        <TabsContent value="calendar" className="pt-4 outline-none">
           <TripCalendar trip={trip} today={today} selected={selected} onSelect={setSelected} />
         </TabsContent>
-        <TabsContent value="map" className="pt-6 outline-none">
+        <TabsContent value="map" className="pt-4 outline-none">
           <TripMap trip={trip} today={today} />
         </TabsContent>
       </Tabs>

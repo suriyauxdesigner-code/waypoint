@@ -12,18 +12,22 @@ import { useSheets } from "@/components/forms/sheets-provider";
 import { Sidebar } from "./sidebar";
 import { BottomNav } from "./bottom-nav";
 import { Wordmark } from "./logo";
+import { IconChip } from "@/components/ui/icon-chip";
 
 function LoadingShell() {
   return (
-    <div className="mx-auto w-full max-w-[1120px] px-4 pt-6 lg:px-10 lg:pt-10" aria-busy="true" aria-label="Loading your trip">
-      <Skeleton className="h-4 w-28" />
-      <Skeleton className="mt-3 h-8 w-64" />
+    <div className="pt-6 lg:pt-10" aria-busy="true" aria-label="Loading your trip">
+      <Skeleton className="h-10 w-48 rounded-full" />
+      <Skeleton className="mt-6 h-8 w-64" />
       <Skeleton className="mt-2 h-4 w-40" />
-      <div className="mt-8 grid gap-4">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex gap-4">
-            <Skeleton className="h-4 w-12" />
-            <Skeleton className="h-4 flex-1" />
+      <div className="card mt-6 grid gap-5 p-5">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4">
+            <Skeleton className="size-10 rounded-full" />
+            <div className="grid flex-1 gap-2">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
           </div>
         ))}
       </div>
@@ -43,8 +47,8 @@ function ErrorShell({ message }: { message: string }) {
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6">
       <Wordmark />
-      <h1 className="mt-8 text-xl font-semibold tracking-tight">We couldn’t open your saved trips</h1>
-      <p className="mt-2 text-[14px] text-muted-foreground">{message} Your data hasn’t been deleted. Download a copy first, then reset.</p>
+      <h1 className="mt-8 text-[22px] font-semibold tracking-tight">We couldn’t open your saved trips</h1>
+      <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{message} Your data hasn’t been deleted. Download a copy first, then reset.</p>
       <div className="mt-6 grid gap-2">
         <Button variant="outline" onClick={download}>
           <Download /> Download raw data
@@ -65,11 +69,9 @@ function ErrorShell({ message }: { message: string }) {
 function NoTrips() {
   return (
     <div className="mx-auto flex min-h-[70dvh] max-w-sm flex-col items-center justify-center px-6 text-center">
-      <div className="grid size-12 place-content-center rounded-full bg-muted">
-        <Compass className="size-6 text-muted-foreground" />
-      </div>
-      <h1 className="mt-4 text-xl font-semibold tracking-tight">No trips yet</h1>
-      <p className="mt-1.5 text-[14px] text-muted-foreground">Plan your first trip — destinations, dates, budget and work hours. Everything else can come later.</p>
+      <IconChip icon={Compass} tone="accent" size="lg" className="size-14 [&_svg]:size-6" />
+      <h1 className="mt-5 text-[24px] font-semibold tracking-tight">Plan your first trip</h1>
+      <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">Where you’re going, when, and your budget. Stays, transport and plans can come later — like notes, but organised.</p>
       <div className="mt-6 grid w-full gap-2">
         <Button asChild size="lg">
           <Link href="/new">Plan a trip</Link>
@@ -114,7 +116,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-dvh">
       <Sidebar />
       <div className="min-w-0 flex-1">
-        <main className="mx-auto w-full max-w-[1120px] px-4 pb-32 sm:px-6 lg:px-10 lg:pb-16">
+        <main className="mx-auto w-full max-w-[1120px] px-4 pb-[calc(112px+env(safe-area-inset-bottom))] sm:px-6 lg:px-10 lg:pb-16">
           {status !== "ready" ? <LoadingShell /> : !trip ? <NoTrips /> : children}
         </main>
       </div>

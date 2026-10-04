@@ -25,7 +25,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm";
 import { EmptyState } from "@/components/common/empty-state";
-import { MobileMenu } from "@/components/shell/page-header";
 import { useSheets } from "@/components/forms/sheets-provider";
 import type { CurrencyCode, DecisionPriority, TransportDecision, TransportOption } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -42,20 +41,20 @@ export function DecisionScreen() {
   if (!decision) {
     return (
       <div className="pt-6 lg:pt-10">
-        <Link href="/trip" className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> Trip
+        <Link href="/trip" aria-label="Back to plan" className="card grid size-10 place-content-center rounded-full hover:bg-muted">
+          <ArrowLeft className="size-[18px]" />
         </Link>
-        <h1 className="mt-4 text-[22px] font-semibold tracking-tight">Transport decisions</h1>
+        <h1 className="mt-5 text-[28px] font-semibold tracking-tight">Compare transport</h1>
         {list.length === 0 ? (
           <EmptyState icon={Route} title="No comparisons yet" description="Compare bus, train and flight options for a long journey from the Trip page." />
         ) : (
-          <ul className="mt-4 divide-y rounded-xl border bg-surface">
+          <ul className="card mt-5 divide-y">
             {list.map((d) => (
               <li key={d.id}>
-                <Link href={`/trip/transport?id=${d.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-muted/50">
+                <Link href={`/trip/transport?id=${d.id}`} className="flex min-h-16 items-center justify-between gap-3 px-4 py-3 hover:bg-surface-2">
                   <span>
-                    <span className="block text-[14px] font-medium">{d.title}</span>
-                    <span className="text-[12px] text-muted-foreground">
+                    <span className="block text-[15px] font-medium">{d.title}</span>
+                    <span className="text-[13px] text-muted-foreground">
                       {fmtWeekdayDate(d.date)} · {d.options.length} options
                     </span>
                   </span>
@@ -90,26 +89,23 @@ function Decision({ decision, currency }: { decision: TransportDecision; currenc
     <div>
       <header className="pt-safe">
         <div className="flex h-14 items-center justify-between lg:h-auto lg:pt-8">
-          <Link href="/trip" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-4" /> Trip
+          <Link href="/trip" aria-label="Back to plan" className="card grid size-10 place-content-center rounded-full hover:bg-muted">
+            <ArrowLeft className="size-[18px]" />
           </Link>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon-sm" aria-label="Delete comparison" onClick={() => setConfirmDelete(true)}>
-              <Trash2 />
-            </Button>
-            <MobileMenu />
-          </div>
+          <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground" aria-label="Delete comparison" onClick={() => setConfirmDelete(true)}>
+            <Trash2 />
+          </Button>
         </div>
-        <p className="eyebrow mt-2">Transport decision</p>
-        <h1 className="mt-1 text-[26px] font-semibold tracking-tight">{decision.title}</h1>
-        <p className="mt-1 text-[13px] text-muted-foreground">
+        <p className="mt-4 text-[14px] font-medium text-accent-foreground">Compare transport</p>
+        <h1 className="mt-0.5 text-[28px] font-semibold leading-tight tracking-tight">{decision.title}</h1>
+        <p className="mt-1 text-[15px] text-muted-foreground">
           {decision.from} → {decision.to} · {fmtWeekdayDate(decision.date)} · {decision.options.length} options
         </p>
       </header>
 
       {chosen && (
-        <div className="mt-6 flex flex-col gap-3 rounded-xl border border-positive/30 bg-positive-soft px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[14px]">
+        <div className="mt-6 flex flex-col gap-3 rounded-card bg-positive-soft px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[15px]">
             <Check className="mr-1.5 inline size-4 text-positive" />
             You chose <span className="font-semibold">{chosen.option.label}</span>
             {transport && <span className="text-muted-foreground"> · {STATUS_LABEL[transport.booking.status]}</span>}
@@ -161,7 +157,7 @@ function Decision({ decision, currency }: { decision: TransportDecision; currenc
       ) : (
         <>
           {/* Verdicts */}
-          <dl className="mt-6 grid grid-cols-3 divide-x rounded-xl border bg-surface">
+          <dl className="card mt-6 grid grid-cols-3 divide-x">
             <Verdict label="Cheapest" metric={result.cheapest} value={result.cheapest && money(result.cheapest.total, currency)} />
             <Verdict label="Fastest" metric={result.fastest} value={result.fastest && fmtDuration(result.fastest.durationMin)} />
             <Verdict
@@ -172,7 +168,7 @@ function Decision({ decision, currency }: { decision: TransportDecision; currenc
             />
           </dl>
           {result.reasons.length > 0 && (
-            <ul className="mt-4 grid gap-1.5 text-[13px] text-muted-foreground">
+            <ul className="mt-4 grid gap-1.5 px-1 text-[14px] text-muted-foreground">
               {result.reasons.map((r) => (
                 <li key={r} className="flex gap-2">
                   <span className="mt-2 size-1 shrink-0 rounded-full bg-foreground/40" />
@@ -185,13 +181,13 @@ function Decision({ decision, currency }: { decision: TransportDecision; currenc
           <button
             type="button"
             onClick={() => setShowMethod((s) => !s)}
-            className="mt-3 flex items-center gap-1 text-[13px] font-medium text-muted-foreground hover:text-foreground"
+            className="mt-3 flex h-10 items-center gap-1 px-1 text-[14px] font-medium text-muted-foreground hover:text-foreground"
             aria-expanded={showMethod}
           >
             <ChevronDown className={cn("size-4 transition-transform", showMethod && "rotate-180")} /> How the score works
           </button>
           {showMethod && (
-            <div className="mt-2 rounded-lg bg-muted px-4 py-3 text-[13px] leading-relaxed text-muted-foreground">
+            <div className="mt-1 rounded-2xl bg-muted px-4 py-3 text-[14px] leading-relaxed text-muted-foreground">
               Each option gets 0–1 on four criteria, relative to the other options (best = 1, worst = 0): <b className="text-foreground">cost</b> (total real cost),{" "}
               <b className="text-foreground">time</b> (door to door), <b className="text-foreground">work</b> (minutes overlapping your work hours) and{" "}
               <b className="text-foreground">convenience</b> (comfort minus changes). Scores are multiplied by the “{PRIORITY_LABEL[decision.priority]}” weights —{" "}
@@ -203,7 +199,7 @@ function Decision({ decision, currency }: { decision: TransportDecision; currenc
           )}
 
           {/* Comparison: table on desktop */}
-          <div className="mt-8 hidden overflow-x-auto lg:block">
+          <div className="card mt-8 hidden overflow-x-auto p-4 lg:block">
             <ComparisonTable metrics={sorted} currency={currency} bestId={result.bestValue?.option.id} chosenId={decision.chosenOptionId} cheapestId={result.cheapest?.option.id} onEdit={setEditing} onChoose={(id) => choose(decision.id, id, router)} />
           </div>
 
@@ -252,13 +248,13 @@ function choose(decisionId: string, optionId: string, router: ReturnType<typeof 
 
 function Verdict({ label, metric, value, highlight }: { label: string; metric?: OptionMetrics; value?: string; highlight?: boolean }) {
   return (
-    <div className="min-w-0 px-3 py-3 sm:px-4">
-      <dt className="eyebrow flex items-center gap-1 !text-[10px]">
-        {highlight && <Trophy className="size-3 text-signal" />}
+    <div className="min-w-0 px-3 py-3.5 sm:px-5">
+      <dt className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground">
+        {highlight && <Trophy className="size-3.5 text-accent" />}
         {label}
       </dt>
       <dd className="mt-1 truncate text-[15px] font-semibold tracking-tight">{metric?.option.label ?? "—"}</dd>
-      <dd className="text-[12px] text-muted-foreground tabular">{value}</dd>
+      <dd className="text-[13px] text-muted-foreground tabular">{value}</dd>
     </div>
   );
 }
@@ -291,7 +287,7 @@ function LegsLine({ option, compact }: { option: TransportOption; compact?: bool
       {sortedLegs(option.legs).map((l) => {
         const I = MODE_ICONS[l.mode];
         return (
-          <li key={l.id} className="flex items-center gap-2 text-[12px]">
+          <li key={l.id} className="flex items-center gap-2 text-[13px]">
             <I className="size-3.5 shrink-0 text-muted-foreground" />
             <span className="min-w-0 truncate">
               <span className="font-medium">{MODE_LABEL[l.mode]}</span> {l.from} → {l.to}
@@ -308,19 +304,19 @@ function LegsLine({ option, compact }: { option: TransportOption; compact?: bool
 
 function ScoreBar({ m }: { m: OptionMetrics }) {
   const parts = [
-    { k: "cost", v: m.weighted.cost, c: "bg-foreground" },
-    { k: "time", v: m.weighted.time, c: "bg-foreground/60" },
-    { k: "work", v: m.weighted.work, c: "bg-foreground/35" },
-    { k: "convenience", v: m.weighted.comfort, c: "bg-foreground/20" },
+    { k: "cost", v: m.weighted.cost, c: "bg-accent" },
+    { k: "time", v: m.weighted.time, c: "bg-accent/65" },
+    { k: "work", v: m.weighted.work, c: "bg-accent/40" },
+    { k: "convenience", v: m.weighted.comfort, c: "bg-accent/20" },
   ];
   return (
     <div>
-      <div className="flex h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
+      <div className="flex h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
         {parts.map((p) => (
           <span key={p.k} className={p.c} style={{ width: `${p.v}%` }} />
         ))}
       </div>
-      <p className="mt-1 text-[11px] text-muted-foreground tabular">
+      <p className="mt-1 text-[12px] text-muted-foreground tabular">
         {parts.map((p) => `${p.k} ${Math.round(p.v)}`).join(" · ")}
       </p>
     </div>
@@ -345,12 +341,12 @@ function OptionBlock({
   onChoose: () => void;
 }) {
   return (
-    <article className={cn("rounded-xl border bg-surface", best && "border-foreground/40", chosen && "border-positive")}>
-      <header className="flex items-start justify-between gap-3 px-4 pt-3.5">
+    <article className={cn("card", best && "ring-2 ring-accent/50", chosen && "ring-2 ring-positive")}>
+      <header className="flex items-start justify-between gap-3 px-4 pt-4">
         <div>
-          <h3 className="text-[16px] font-semibold tracking-tight">{m.option.label}</h3>
+          <h3 className="text-[17px] font-semibold tracking-tight">{m.option.label}</h3>
           <div className="mt-1 flex gap-1">
-            {best && <Badge tone="signal">Best value</Badge>}
+            {best && <Badge tone="accent">Best value</Badge>}
             {cheapest && <Badge>Cheapest</Badge>}
             {chosen && <Badge tone="positive">Chosen</Badge>}
           </div>
@@ -363,7 +359,7 @@ function OptionBlock({
       <div className="px-4 py-3">
         <LegsLine option={m.option} />
       </div>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t px-4 py-3 text-[12px]">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 border-t px-4 py-3 text-[13px]">
         <Metric label="Tickets" value={money(m.ticket, currency)} />
         <Metric label="Extras" value={money(m.extras, currency)} />
         <Metric label="Work hours hit" value={m.workOverlapMin ? fmtDuration(m.workOverlapMin) : "None"} />
@@ -376,10 +372,10 @@ function OptionBlock({
         <ScoreBar m={m} />
       </div>
       <footer className="flex gap-2 border-t px-4 py-3">
-        <Button variant="outline" size="sm" onClick={onEdit}>
+        <Button variant="outline" onClick={onEdit}>
           <Pencil /> Edit
         </Button>
-        <Button size="sm" className="flex-1" variant={chosen ? "secondary" : "default"} disabled={chosen} onClick={onChoose}>
+        <Button className="flex-1" variant={chosen ? "secondary" : "default"} disabled={chosen} onClick={onChoose}>
           {chosen ? "Chosen" : "Choose this"}
         </Button>
       </footer>
@@ -449,9 +445,9 @@ function ComparisonTable({
         <tr>
           <th className="w-[132px]" />
           {metrics.map((m) => (
-            <th key={m.option.id} className={cn("border-b px-3 pb-3 align-bottom", m.option.id === bestId && "bg-signal-soft/50")}>
+            <th key={m.option.id} className={cn("border-b px-3 pb-3 align-bottom", m.option.id === bestId && "bg-accent-soft/60")}>
               <div className="flex flex-wrap gap-1">
-                {m.option.id === bestId && <Badge tone="signal">Best value</Badge>}
+                {m.option.id === bestId && <Badge tone="accent">Best value</Badge>}
                 {m.option.id === cheapestId && <Badge>Cheapest</Badge>}
                 {m.option.id === chosenId && <Badge tone="positive">Chosen</Badge>}
               </div>
@@ -474,7 +470,7 @@ function ComparisonTable({
                 key={m.option.id}
                 className={cn(
                   "px-3 py-2.5 align-top tabular",
-                  m.option.id === bestId && "bg-signal-soft/50",
+                  m.option.id === bestId && "bg-accent-soft/60",
                   r.strong && "font-semibold",
                   r.best?.(m) && metrics.length > 1 && "text-positive",
                 )}
@@ -487,7 +483,7 @@ function ComparisonTable({
         <tr>
           <th />
           {metrics.map((m) => (
-            <td key={m.option.id} className={cn("px-3 py-3", m.option.id === bestId && "bg-signal-soft/50 rounded-b-lg")}>
+            <td key={m.option.id} className={cn("px-3 py-3", m.option.id === bestId && "bg-accent-soft/60 rounded-b-xl")}>
               <div className="flex gap-1.5">
                 <Button variant="outline" size="sm" onClick={() => onEdit(m.option)} aria-label={`Edit ${m.option.label}`}>
                   <Pencil />

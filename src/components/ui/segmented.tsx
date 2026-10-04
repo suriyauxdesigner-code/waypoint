@@ -20,7 +20,7 @@ export function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className={cn("inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5", className)}
+      className={cn("inline-flex items-center gap-0.5 rounded-xl bg-muted p-1", className)}
     >
       {options.map((o) => (
         <button
@@ -30,10 +30,10 @@ export function Segmented<T extends string>({
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "flex-1 rounded-md px-3 font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
-            size === "sm" ? "h-7 text-[12px]" : "h-8 text-[13px]",
+            "flex-1 rounded-lg px-3 font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
+            size === "sm" ? "h-8 text-[13px]" : "h-9 text-[14px] lg:h-8 lg:text-[13px]",
             value === o.value
-              ? "bg-surface text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.06)]"
+              ? "bg-surface text-foreground shadow-[0_1px_3px_rgb(16_24_40/0.1)]"
               : "text-muted-foreground hover:text-foreground",
           )}
         >
@@ -67,10 +67,10 @@ export function ChipToggleGroup<T extends string | number>({
             aria-pressed={on}
             onClick={() => onChange(on ? value.filter((v) => v !== o.value) : [...value, o.value])}
             className={cn(
-              "h-9 rounded-full border px-3.5 text-[13px] font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
+              "h-10 rounded-full border px-4 text-[14px] font-medium lg:h-9 lg:text-[13px] transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
               on
                 ? "border-primary bg-primary text-primary-foreground"
-                : "border-border-strong bg-surface text-foreground hover:bg-muted",
+                : "border-border bg-surface text-foreground hover:bg-muted",
             )}
           >
             {o.label}

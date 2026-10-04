@@ -55,7 +55,7 @@ function MockRouteMap({ destinations, today }: { destinations: Destination[]; to
 
   if (!view) {
     return (
-      <div className="grid aspect-square place-content-center rounded-xl border bg-surface-2 text-[13px] text-muted-foreground">
+      <div className="card grid aspect-[4/3] place-content-center text-[14px] text-muted-foreground">
         Add destinations to see your route.
       </div>
     );
@@ -83,7 +83,7 @@ function MockRouteMap({ destinations, today }: { destinations: Destination[]; to
   }
 
   return (
-    <figure className="relative overflow-hidden rounded-xl border bg-surface-2">
+    <figure className="card relative overflow-hidden !bg-surface-2">
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Route: ${placed.map((p) => p.name).join(" to ")}`} className="block h-auto w-full">
         {gridLines}
         <path d={outlinePath} className="fill-surface stroke-border-strong" strokeWidth={1} />
@@ -133,7 +133,7 @@ function MockRouteMap({ destinations, today }: { destinations: Destination[]; to
           </g>
         ))}
       </svg>
-      <figcaption className="absolute bottom-2 left-3 text-[10px] text-subtle-foreground">Offline route sketch · not to scale for navigation</figcaption>
+      <figcaption className="absolute bottom-2.5 left-4 text-[12px] text-subtle-foreground">Offline route sketch · not to scale for navigation</figcaption>
     </figure>
   );
 }
@@ -152,19 +152,19 @@ export function TripMap({ trip, today }: { trip: Trip; today: string }) {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8">
       <RouteMap destinations={dests} today={today} />
-      <div>
-        <div className="flex items-center justify-between">
-          <h3 className="eyebrow">Route</h3>
-          <Button size="sm" variant="ghost" onClick={() => setEditing("new")}>
-            <Plus /> Destination
+      <div className="card self-start">
+        <div className="flex min-h-14 items-center justify-between border-b px-4 py-2 lg:px-5">
+          <h3 className="text-[16px] font-semibold tracking-tight">Stops</h3>
+          <Button size="sm" variant="ghost" className="text-accent-foreground" onClick={() => setEditing("new")}>
+            <Plus /> Add stop
           </Button>
         </div>
         {dests.length === 0 ? (
-          <EmptyState compact icon={MapPin} title="Add your first route" description="Add the places you’ll pass through, in order." />
+          <EmptyState compact icon={MapPin} title="Add your first stop" description="Add the places you’ll pass through, in order." />
         ) : (
-          <ol className="mt-2">
+          <ol className="px-4 pt-4 lg:px-5">
             {dests.map((d, i) => {
               const state = destinationState(d, today);
               const n = d.arriveDate && d.departDate ? nights(d.arriveDate, d.departDate) : 0;
@@ -172,24 +172,24 @@ export function TripMap({ trip, today }: { trip: Trip; today: string }) {
                 <li key={d.id} className="group relative flex gap-3">
                   <span className="relative flex w-4 justify-center">
                     {i < dests.length - 1 && (
-                      <span className={cn("absolute top-5 bottom-0 w-px", state === "completed" ? "bg-foreground" : "border-l border-dashed border-border-strong")} />
+                      <span className={cn("absolute top-5 bottom-0 w-px", state === "completed" ? "bg-accent" : "border-l border-dashed border-border-strong")} />
                     )}
                     <span
                       className={cn(
-                        "relative z-10 mt-1.5 size-3 rounded-full border-2",
-                        state === "completed" && "border-foreground bg-foreground",
+                        "relative z-10 mt-1 size-3.5 rounded-full border-2",
+                        state === "completed" && "border-accent bg-accent",
                         state === "current" && "border-signal bg-signal ring-4 ring-signal/20",
-                        state === "upcoming" && "border-foreground bg-surface",
+                        state === "upcoming" && "border-border-strong bg-surface",
                       )}
                     />
                   </span>
                   <div className="flex min-w-0 flex-1 items-start justify-between gap-2 pb-5">
                     <div className="min-w-0">
-                      <p className={cn("text-[14px] font-semibold tracking-tight", state === "upcoming" && "text-foreground/80")}>
+                      <p className={cn("text-[15px] font-semibold tracking-tight", state === "upcoming" && "text-foreground/80")}>
                         {d.name}
                         {state === "current" && <Badge tone="signal" className="ml-2 align-middle">You’re here</Badge>}
                       </p>
-                      <p className="text-[12px] text-muted-foreground">
+                      <p className="text-[13px] text-muted-foreground">
                         {d.arriveDate && d.departDate ? `${fmtRange(d.arriveDate, d.departDate)}${n ? ` · ${n} ${n === 1 ? "night" : "nights"}` : " · passing through"}` : "Dates not set"}
                         {d.lat === undefined && " · not on map"}
                       </p>
@@ -232,6 +232,7 @@ function DestinationSheet({ trip, destination, onClose }: { trip: Trip; destinat
   const [lng, setLng] = React.useState(destination?.lng?.toString() ?? "");
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const known = lookupPlace(name);
+  const [showCoords, setShowCoords] = React.useState<boolean>(!!destination?.lat && !lookupPlace(destination.name));
 
   const close = (o: boolean) => {
     setOpen(o);
@@ -267,7 +268,10 @@ function DestinationSheet({ trip, destination, onClose }: { trip: Trip; destinat
     <ResponsiveSheet
       open={open}
       onOpenChange={close}
-      title={destination ? "Edit destination" : "Add destination"}
+      title={destination ? "Edit stop" : "Add a stop"}
+      description="A place on your route"
+      icon={MapPin}
+      iconTone="accent"
       footer={
         <>
           {destination && (
@@ -300,6 +304,13 @@ function DestinationSheet({ trip, destination, onClose }: { trip: Trip; destinat
           <Field label="Leave" htmlFor="d-dep" optional error={errors.depart}>
             <Input id="d-dep" type="date" min={trip.startDate} max={trip.endDate} value={depart} aria-invalid={!!errors.depart} onChange={(e) => setDepart(e.target.value)} />
           </Field>
+        </div>
+        {!showCoords && !errors.lat && !errors.lng ? (
+          <button type="button" onClick={() => setShowCoords(true)} className="justify-self-start text-[14px] font-medium text-muted-foreground hover:text-foreground">
+            + Set map position manually
+          </button>
+        ) : (
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Latitude" htmlFor="d-lat" optional error={errors.lat}>
             <Input id="d-lat" inputMode="decimal" value={lat} placeholder={known ? String(known.lat) : ""} onChange={(e) => setLat(e.target.value)} />
           </Field>
@@ -307,6 +318,7 @@ function DestinationSheet({ trip, destination, onClose }: { trip: Trip; destinat
             <Input id="d-lng" inputMode="decimal" value={lng} placeholder={known ? String(known.lng) : ""} onChange={(e) => setLng(e.target.value)} />
           </Field>
         </div>
+        )}
       </form>
     </ResponsiveSheet>
   );

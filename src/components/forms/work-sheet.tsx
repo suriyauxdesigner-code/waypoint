@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import { Briefcase } from "lucide-react";
 import { ResponsiveSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -46,7 +47,9 @@ export function WorkSheet({
       open={open}
       onOpenChange={onOpenChange}
       title="Work schedule"
-      description="Work hours are protected on your timeline and in transport comparisons."
+      description="Protects work hours on your plan"
+        icon={Briefcase}
+        iconTone="accent"
       footer={
         <Button size="lg" className="lg:h-10" onClick={save}>
           Save

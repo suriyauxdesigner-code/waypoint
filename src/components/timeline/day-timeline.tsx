@@ -7,19 +7,18 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
-  Bed,
   Briefcase,
   ChevronDown,
   ChevronUp,
   GraduationCap,
   LogIn,
   LogOut,
-  MapPin,
   Plus,
   Route,
   TriangleAlert,
   Wifi,
   GripVertical,
+  type LucideIcon,
 } from "lucide-react";
 import {
   DndContext,
@@ -38,12 +37,12 @@ import { useSheets } from "@/components/forms/sheets-provider";
 import type { DayPlan, TimelineItem } from "@/lib/calc/timeline";
 import { fmtDuration, toMinutes } from "@/lib/calc/dates";
 import { MODE_LABEL } from "@/lib/calc/transport";
-import { STATUS_LABEL } from "@/lib/calc/bookings";
+import { STATUS_LABEL, paidFor } from "@/lib/calc/bookings";
 import { money } from "@/lib/format";
 import { moveEvent, reorderEvents } from "@/lib/store/actions";
 import type { CurrencyCode, Trip } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useIsDesktop } from "@/lib/store/hooks";
+import { useData, useIsDesktop } from "@/lib/store/hooks";
 
 interface Props {
   plan: DayPlan;
@@ -53,6 +52,8 @@ interface Props {
   editable?: boolean;
   /** Show the empty-evening hint ("You're free after work"). */
   hints?: boolean;
+  /** Dense rendering for multi-day overviews: work collapses to one quiet line. */
+  compact?: boolean;
   className?: string;
 }
 
@@ -87,7 +88,69 @@ function isPast(item: TimelineItem, nowTime?: string) {
   return toMinutes(end) < toMinutes(nowTime);
 }
 
-export function DayTimeline({ plan, trip, isToday, nowTime, editable, hints = true, className }: Props) {
+/* ------------------------------------------------------------------ rail */
+
+/** Left rail cell: a round node with the connecting line underneath. */
+function Rail({ children, line = true, className }: { children: React.ReactNode; line?: boolean; className?: string }) {
+  return (
+    <span className={cn("relative flex w-10 shrink-0 justify-center", className)}>
+      {line && <span aria-hidden className="absolute top-10 -bottom-1 w-px bg-border" />}
+      {children}
+    </span>
+  );
+}
+
+function Node({ icon: Icon, tone = "outline", small }: { icon?: LucideIcon; tone?: "outline" | "strong" | "signal" | "warning" | "work" | "dot"; small?: boolean }) {
+  if (tone === "dot" || !Icon) {
+    return (
+      <span className="relative z-10 grid size-10 place-content-center">
+        <span className="size-2.5 rounded-full border-2 border-border-strong bg-surface" />
+      </span>
+    );
+  }
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "relative z-10 grid place-content-center rounded-full",
+        small ? "size-8 [&_svg]:size-4" : "size-10 [&_svg]:size-[18px]",
+        tone === "outline" && "border bg-surface text-foreground/75",
+        tone === "strong" && "bg-primary text-primary-foreground",
+        tone === "signal" && "bg-signal-soft text-signal-foreground",
+        tone === "warning" && "border border-dashed border-warning bg-warning-soft text-warning-foreground",
+        tone === "work" && "work-stripes border text-muted-foreground",
+      )}
+    >
+      <Icon />
+    </span>
+  );
+}
+
+function nodeFor(item: TimelineItem): { icon?: LucideIcon; tone: React.ComponentProps<typeof Node>["tone"] } {
+  switch (item.kind) {
+    case "leg":
+      return { icon: MODE_ICONS[item.mode ?? "other"], tone: "strong" };
+    case "arrival":
+      return { icon: MODE_ICONS[item.mode ?? "other"], tone: "outline" };
+    case "check_in":
+      return { icon: LogIn, tone: "outline" };
+    case "check_out":
+      return { icon: LogOut, tone: "outline" };
+    case "exam":
+      return { icon: GraduationCap, tone: "signal" };
+    case "decision":
+      return { icon: Route, tone: "warning" };
+    case "work":
+      return { icon: Briefcase, tone: "work" };
+    default:
+      if (item.eventType === "note" || item.eventType === "errand") return { tone: "dot" };
+      return { icon: item.eventType ? EVENT_ICONS[item.eventType] : undefined, tone: "outline" };
+  }
+}
+
+/* -------------------------------------------------------------- timeline */
+
+export function DayTimeline({ plan, trip, isToday, nowTime, editable, hints = true, compact, className }: Props) {
   const open = useOpenItem();
   const sheets = useSheets();
   const desktop = useIsDesktop();
@@ -102,7 +165,6 @@ export function DayTimeline({ plan, trip, isToday, nowTime, editable, hints = tr
     return idx === -1 ? plan.timed.length : idx;
   }, [isToday, nowTime, plan.timed]);
 
-  const lastTimed = plan.timed[plan.timed.length - 1];
   const workEnd = ws.end;
   const freeAfterWork =
     hints &&
@@ -113,10 +175,14 @@ export function DayTimeline({ plan, trip, isToday, nowTime, editable, hints = tr
   return (
     <div className={cn("relative", className)}>
       {empty ? (
-        <div className="flex items-center gap-4 py-4">
-          <span className="w-12 shrink-0" />
-          <div className="flex-1 border-l border-dashed pl-5">
-            <p className="text-[14px] font-medium">Nothing planned{plan.isDayOff ? " — day off" : ""}.</p>
+        <div className="flex items-center gap-3 py-1">
+          <Rail line={false}>
+            <span className="grid size-10 place-content-center rounded-full border border-dashed text-subtle-foreground">
+              <span className="size-1.5 rounded-full bg-current" />
+            </span>
+          </Rail>
+          <div>
+            <p className="text-[15px] font-medium">Nothing planned{plan.isDayOff ? " — day off" : ""}</p>
             <p className="text-[13px] text-muted-foreground">A free day. Add something, or leave it open.</p>
           </div>
         </div>
@@ -130,27 +196,26 @@ export function DayTimeline({ plan, trip, isToday, nowTime, editable, hints = tr
                 currency={c}
                 past={isToday ? isPast(item, nowTime) : false}
                 active={!!(isToday && nowTime && item.kind === "work" && toMinutes(item.time!) <= toMinutes(nowTime) && toMinutes(item.endTime!) > toMinutes(nowTime))}
-                last={i === plan.timed.length - 1 && plan.flexible.length === 0 && !freeAfterWork}
+                last={i === plan.timed.length - 1 && plan.flexible.length === 0 && !freeAfterWork && !editable}
                 onOpen={() => open(item)}
                 wifi={item.kind === "work" && ws.showWifiInfo ? plan.stayTonight?.wifi : undefined}
-                stayName={plan.stayTonight?.property}
+                compact={compact}
               />
             </React.Fragment>
           ))}
           {nowIndex === plan.timed.length && plan.timed.length > 0 && isToday && <NowLine time={nowTime!} />}
-          {freeAfterWork && lastTimed && (
+          {freeAfterWork && (
             <li className="flex gap-3">
-              <span className="w-12 shrink-0 pt-0.5 text-right font-mono text-[12px] text-subtle-foreground">{workEnd}</span>
-              <span className="relative flex w-4 justify-center">
-                <span className="mt-1.5 size-2 rounded-full border border-dashed border-border-strong" />
-              </span>
-              <div className="flex-1 pb-5">
-                <p className="text-[13px] text-muted-foreground">You’re free after work.</p>
+              <Rail line={plan.flexible.length > 0 || !!editable}>
+                <Node tone="dot" />
+              </Rail>
+              <div className="flex-1 pb-4 pt-2">
+                <p className="text-[14px] text-muted-foreground">Free after {workEnd}.</p>
                 {editable !== false && (
                   <button
                     type="button"
                     onClick={() => sheets.open({ type: "event", date: plan.date, eventType: "activity" })}
-                    className="mt-0.5 text-[13px] font-medium text-foreground underline-offset-4 hover:underline"
+                    className="text-[14px] font-medium text-accent-foreground underline-offset-4 hover:underline"
                   >
                     Plan something for the evening
                   </button>
@@ -162,21 +227,24 @@ export function DayTimeline({ plan, trip, isToday, nowTime, editable, hints = tr
       )}
 
       {plan.flexible.length > 0 && (
-        <FlexibleList items={plan.flexible} onOpen={open} reorderable={!!editable} desktop={desktop} />
+        <FlexibleList items={plan.flexible} onOpen={open} reorderable={!!editable} desktop={desktop} hasRailAfter={!!editable} />
       )}
 
       {editable && (
-        <div className="flex gap-3 pt-1">
-          <span className="w-12 shrink-0" />
-          <span className="w-4" />
-          <button
-            type="button"
-            onClick={() => sheets.open({ type: "event", date: plan.date })}
-            className="-ml-1 flex h-9 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <Plus className="size-4" /> Add to {isToday ? "today" : "this day"}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => sheets.open({ type: "event", date: plan.date })}
+          className="group flex w-full items-center gap-3 rounded-xl text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+        >
+          <Rail line={false}>
+            <span className="grid size-10 place-content-center rounded-full border border-dashed border-border-strong text-muted-foreground transition-colors group-hover:border-accent group-hover:text-accent-foreground">
+              <Plus className="size-[18px]" />
+            </span>
+          </Rail>
+          <span className="text-[15px] font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+            Add to {isToday ? "today" : "this day"}
+          </span>
+        </button>
       )}
     </div>
   );
@@ -185,66 +253,20 @@ export function DayTimeline({ plan, trip, isToday, nowTime, editable, hints = tr
 function NowLine({ time }: { time: string }) {
   return (
     <li aria-label={`Now, ${time}`} className="relative flex items-center gap-3 py-1">
-      <span className="w-12 shrink-0 text-right font-mono text-[11px] font-semibold text-signal">{time}</span>
-      <span className="relative flex w-4 justify-center">
-        <span className="size-2.5 rounded-full bg-signal ring-4 ring-signal/15" />
+      <span className="relative flex w-10 shrink-0 justify-center">
+        <span aria-hidden className="absolute -top-1 -bottom-1 w-px bg-border" />
+        <span className="relative size-3 rounded-full bg-signal ring-4 ring-signal/20" />
       </span>
-      <span className="h-px flex-1 bg-signal/60" />
+      <span className="text-[12px] font-semibold tabular text-signal-foreground">Now · {time}</span>
+      <span className="h-px flex-1 bg-signal/50" />
     </li>
   );
 }
 
-function RailIcon({ item }: { item: TimelineItem }) {
-  const base = "relative z-10 grid size-6 place-content-center rounded-full border bg-surface text-muted-foreground [&_svg]:size-3.5";
-  switch (item.kind) {
-    case "leg":
-    case "arrival": {
-      const I = MODE_ICONS[item.mode ?? "other"];
-      return (
-        <span className={cn(base, "border-foreground/80 text-foreground")}>
-          <I />
-        </span>
-      );
-    }
-    case "check_in":
-      return (
-        <span className={base}>
-          <LogIn />
-        </span>
-      );
-    case "check_out":
-      return (
-        <span className={base}>
-          <LogOut />
-        </span>
-      );
-    case "exam":
-      return (
-        <span className={cn(base, "border-signal bg-signal-soft text-signal-foreground")}>
-          <GraduationCap />
-        </span>
-      );
-    case "decision":
-      return (
-        <span className={cn(base, "border-dashed border-warning text-warning-foreground")}>
-          <Route />
-        </span>
-      );
-    default: {
-      if (item.eventType === "note" || item.eventType === "errand") {
-        return (
-          <span className="relative z-10 flex size-6 items-center justify-center">
-            <span className="size-2 rounded-full bg-border-strong" />
-          </span>
-        );
-      }
-      return (
-        <span className="relative z-10 flex size-6 items-center justify-center">
-          <span className="size-2.5 rounded-full border-2 border-foreground bg-surface" />
-        </span>
-      );
-    }
-  }
+function useActual(item: TimelineItem) {
+  const data = useData();
+  if (item.source.kind === "event" && item.status) return paidFor(data.expenses, "event", item.source.id);
+  return 0;
 }
 
 function Row({
@@ -255,7 +277,7 @@ function Row({
   last,
   onOpen,
   wifi,
-  stayName,
+  compact,
 }: {
   item: TimelineItem;
   currency: CurrencyCode;
@@ -264,41 +286,39 @@ function Row({
   last: boolean;
   onOpen: () => void;
   wifi?: { available: boolean; speedMbps?: number; network?: string };
-  stayName?: string;
+  compact?: boolean;
 }) {
+  const actual = useActual(item);
+  const node = nodeFor(item);
+
   if (item.kind === "work") {
     const dur = toMinutes(item.endTime!) - toMinutes(item.time!);
     return (
-      <li className={cn("group flex gap-3", past && "opacity-55")}>
-        <span className="w-12 shrink-0 pt-2 text-right font-mono text-[12px] leading-tight text-muted-foreground">
-          {item.time}
-          <br />
-          <span className="text-subtle-foreground">{item.endTime}</span>
-        </span>
-        <span className="relative flex w-4 justify-center">
-          <span className={cn("absolute inset-y-0 w-1.5 rounded-full work-stripes", active && "bg-foreground/10")} />
-        </span>
+      <li className={cn("flex gap-3", past && "opacity-50")}>
+        <Rail line={!last}>
+          <Node icon={Briefcase} tone="work" small={compact} />
+        </Rail>
         <button
           type="button"
           onClick={onOpen}
           className={cn(
-            "mb-3 flex min-w-0 flex-1 items-start justify-between gap-3 rounded-lg border px-3.5 py-3 text-left transition-colors work-stripes hover:border-border-strong",
-            active && "border-foreground/30",
+            "-mx-2 mb-2 flex min-h-11 min-w-0 flex-1 items-center justify-between gap-3 rounded-xl px-2 text-left transition-colors outline-none hover:bg-muted/70 focus-visible:ring-[3px] focus-visible:ring-ring",
+            compact ? "py-1" : "py-1.5",
           )}
         >
-          <span>
-            <span className="flex items-center gap-2 text-[14px] font-semibold tracking-tight">
-              <Briefcase className="size-4 text-muted-foreground" /> Work
-              {active && <Badge tone="signal">In progress</Badge>}
+          <span className="min-w-0">
+            <span className="block text-[13px] tabular text-muted-foreground">
+              {item.time} – {item.endTime}
             </span>
-            <span className="mt-0.5 block text-[12px] text-muted-foreground">
-              {fmtDuration(dur)} protected
-              {stayName && wifi?.available ? ` · ${stayName}` : ""}
+            <span className="flex items-center gap-2 text-[15px] text-muted-foreground">
+              <span className="font-medium text-foreground/80">Work</span>
+              <span className="text-[13px]">{fmtDuration(dur)}</span>
+              {active && <Badge tone="signal">Now</Badge>}
             </span>
           </span>
-          {wifi && (
-            <span className="flex shrink-0 items-center gap-1 rounded-full bg-surface/90 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-              <Wifi className="size-3" />
+          {wifi && !compact && (
+            <span className="flex shrink-0 items-center gap-1 text-[12px] text-muted-foreground">
+              <Wifi className="size-3.5" />
               {wifi.available ? (wifi.speedMbps ? `${wifi.speedMbps} Mbps` : "Wi-Fi") : "No Wi-Fi"}
             </span>
           )}
@@ -310,51 +330,52 @@ function Row({
   const meta: string[] = [];
   if (item.kind === "leg" && item.mode) {
     meta.push(MODE_LABEL[item.mode]);
-    if (item.endTime) meta.push(`arr ${item.endTime}`);
+    if (item.endTime) meta.push(`arrives ${item.endTime}`);
     if (item.subtitle) meta.push(item.subtitle);
   } else if (item.kind === "exam") {
-    meta.push(`${item.time}–${item.endTime}`);
+    meta.push("Exam");
     if (item.location) meta.push(item.location);
   } else {
-    if (item.endTime) meta.push(`until ${item.endTime}`);
     if (item.location) meta.push(item.location);
     if (item.subtitle && item.kind !== "decision") meta.push(item.subtitle);
   }
 
+  const timeLabel = item.time ? (item.endTime && item.kind !== "leg" ? `${item.time} – ${item.endTime}` : item.time) : undefined;
   const showStatus = item.status && item.status !== "confirmed" && item.kind !== "check_out";
   const statusTone = item.status === "need_to_book" ? "warning" : item.status === "cancelled" ? "danger" : "neutral";
+  const strong = item.kind === "leg" || item.kind === "exam" || item.kind === "decision";
+  const quiet = item.kind === "arrival" || item.kind === "check_out" || item.eventType === "note" || item.eventType === "errand";
 
   return (
-    <li className={cn("group flex gap-3", past && "opacity-55")}>
-      <span className="w-12 shrink-0 pt-[3px] text-right font-mono text-[12px] text-muted-foreground tabular">{item.time ?? ""}</span>
-      <span className="relative flex w-4 justify-center">
-        {!last && <span aria-hidden className="absolute top-6 bottom-0 w-px bg-border" />}
-        <span className="-mx-1">
-          <RailIcon item={item} />
-        </span>
-      </span>
+    <li className={cn("flex gap-3", past && "opacity-50")}>
+      <Rail line={!last}>
+        <Node icon={node.icon} tone={node.tone} small={compact} />
+      </Rail>
       <button
         type="button"
         onClick={onOpen}
-        className="-mt-1 mb-2 flex min-h-11 min-w-0 flex-1 items-start justify-between gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/70 outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+        className={cn(
+          "-mx-2 mb-2 flex min-h-11 min-w-0 flex-1 items-start justify-between gap-3 rounded-xl px-2 text-left transition-colors outline-none hover:bg-muted/70 focus-visible:ring-[3px] focus-visible:ring-ring",
+          compact ? "py-1" : "py-1.5",
+        )}
       >
         <span className="min-w-0">
+          {timeLabel && <span className="block text-[13px] tabular text-muted-foreground">{timeLabel}</span>}
           <span
             className={cn(
-              "block text-[14px] leading-snug",
-              item.kind === "leg" || item.kind === "exam" || item.kind === "decision" ? "font-semibold tracking-tight" : "font-medium",
-              item.kind === "arrival" && "font-normal text-muted-foreground",
-              (item.eventType === "note" || item.eventType === "errand") && "font-normal",
+              "block text-[15px] leading-snug",
+              strong ? "font-semibold tracking-tight" : "font-medium",
+              quiet && "font-normal text-foreground/80",
             )}
           >
-            {item.kind === "exam" ? `Exam · ${item.title}` : item.title}
+            {item.title}
           </span>
-          {meta.length > 0 && <span className="mt-0.5 block truncate text-[12px] text-muted-foreground">{meta.join(" · ")}</span>}
+          {meta.length > 0 && <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">{meta.join(" · ")}</span>}
           {(showStatus || (item.workOverlapMin > 0 && !item.keptDespiteWork) || item.kind === "decision") && (
             <span className="mt-1.5 flex flex-wrap gap-1">
               {item.kind === "decision" ? (
                 <Badge tone="warning">
-                  Not decided <ArrowRight /> Compare options
+                  Not decided <ArrowRight /> Compare
                 </Badge>
               ) : (
                 showStatus && <Badge tone={statusTone}>{STATUS_LABEL[item.status!]}</Badge>
@@ -372,7 +393,12 @@ function Row({
             </span>
           )}
         </span>
-        {item.cost ? <span className="shrink-0 pt-px text-[13px] tabular text-muted-foreground">{money(item.cost, currency)}</span> : null}
+        {item.cost ? (
+          <span className="shrink-0 pt-0.5 text-right text-[14px] tabular">
+            <span className={actual > 0 ? "text-muted-foreground" : "font-medium"}>{money(item.cost, currency)}</span>
+            {actual > 0 && <span className="block text-[12px] font-medium text-foreground">paid {money(actual, currency)}</span>}
+          </span>
+        ) : null}
       </button>
     </li>
   );
@@ -383,11 +409,13 @@ function FlexibleList({
   onOpen,
   reorderable,
   desktop,
+  hasRailAfter,
 }: {
   items: TimelineItem[];
   onOpen: (i: TimelineItem) => void;
   reorderable: boolean;
   desktop: boolean;
+  hasRailAfter: boolean;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -418,6 +446,7 @@ function FlexibleList({
             desktop={desktop}
             first={idx === 0}
             lastIdx={idx === items.length - 1}
+            line={hasRailAfter || idx < items.length - 1}
           />
         );
       })}
@@ -425,20 +454,22 @@ function FlexibleList({
   );
 
   return (
-    <div className="mt-1 flex gap-3">
-      <span className="w-12 shrink-0 pt-2.5 text-right eyebrow !text-[10px]">Anytime</span>
-      <span className="w-4" />
-      <div className="min-w-0 flex-1 border-l border-dashed pl-1">
-        {reorderable && desktop ? (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-            <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-              {list}
-            </SortableContext>
-          </DndContext>
-        ) : (
-          list
-        )}
+    <div>
+      <div className="flex items-center gap-3">
+        <span className="relative flex w-10 shrink-0 justify-center self-stretch">
+          <span aria-hidden className="absolute inset-y-0 w-px bg-border" />
+        </span>
+        <p className="py-1 text-[13px] font-medium text-muted-foreground">Anytime</p>
       </div>
+      {reorderable && desktop ? (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+            {list}
+          </SortableContext>
+        </DndContext>
+      ) : (
+        list
+      )}
     </div>
   );
 }
@@ -451,6 +482,7 @@ function FlexibleRow({
   desktop,
   first,
   lastIdx,
+  line,
 }: {
   id: string;
   item: TimelineItem;
@@ -459,58 +491,73 @@ function FlexibleRow({
   desktop: boolean;
   first: boolean;
   lastIdx: boolean;
+  line: boolean;
 }) {
   const sortable = useSortable({ id, disabled: !reorderable || !desktop });
   const style = { transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition };
-  const Icon = item.eventType ? EVENT_ICONS[item.eventType] : item.kind === "check_in" || item.kind === "check_out" ? Bed : MapPin;
+  const node = nodeFor(item);
   return (
     <li
       ref={sortable.setNodeRef}
       style={style}
-      className={cn("group flex items-center gap-1 rounded-md", sortable.isDragging && "relative z-10 bg-surface shadow-md")}
+      className={cn("group flex items-center gap-3", sortable.isDragging && "relative z-10 rounded-xl bg-surface shadow-md")}
     >
-      {reorderable && desktop && (
+      <span className="relative flex w-10 shrink-0 justify-center self-stretch">
+        {line && <span aria-hidden className="absolute inset-y-0 w-px bg-border" />}
+        {!line && <span aria-hidden className="absolute top-0 h-1/2 w-px bg-border" />}
+        <span className="relative z-10 grid size-10 place-content-center">
+          {node.icon && node.tone !== "dot" ? (
+            <span className="grid size-7 place-content-center rounded-full border bg-surface text-foreground/70 [&_svg]:size-3.5">
+              <node.icon />
+            </span>
+          ) : (
+            <span className="size-2.5 rounded-full border-2 border-border-strong bg-surface" />
+          )}
+        </span>
+      </span>
+      <div className="mb-1 flex min-w-0 flex-1 items-center gap-1">
         <button
           type="button"
-          aria-label={`Reorder ${item.title}`}
-          className="grid h-9 w-6 cursor-grab place-content-center text-subtle-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing"
-          {...sortable.attributes}
-          {...sortable.listeners}
+          onClick={onOpen}
+          className="-mx-2 flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl px-2 text-left text-[15px] transition-colors outline-none hover:bg-muted/70 focus-visible:ring-[3px] focus-visible:ring-ring"
         >
-          <GripVertical className="size-4" />
+          <span className="min-w-0 flex-1 truncate">{item.title}</span>
+          {item.status && item.status !== "confirmed" && <Badge tone={item.status === "need_to_book" ? "warning" : "neutral"}>{STATUS_LABEL[item.status]}</Badge>}
         </button>
-      )}
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex min-h-10 min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 text-left text-[14px] transition-colors hover:bg-muted/70"
-      >
-        <Icon className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 flex-1 truncate">{item.title}</span>
-        {item.status && item.status !== "confirmed" && <Badge tone={item.status === "need_to_book" ? "warning" : "neutral"}>{STATUS_LABEL[item.status]}</Badge>}
-      </button>
-      {reorderable && !desktop && (
-        <span className="flex shrink-0">
+        {reorderable && desktop && (
           <button
             type="button"
-            aria-label={`Move ${item.title} up`}
-            disabled={first}
-            onClick={() => moveEvent(id, -1)}
-            className="grid size-9 place-content-center rounded-md text-muted-foreground disabled:opacity-30"
+            aria-label={`Reorder ${item.title}`}
+            className="grid h-9 w-6 cursor-grab place-content-center text-subtle-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing"
+            {...sortable.attributes}
+            {...sortable.listeners}
           >
-            <ChevronUp className="size-4" />
+            <GripVertical className="size-4" />
           </button>
-          <button
-            type="button"
-            aria-label={`Move ${item.title} down`}
-            disabled={lastIdx}
-            onClick={() => moveEvent(id, 1)}
-            className="grid size-9 place-content-center rounded-md text-muted-foreground disabled:opacity-30"
-          >
-            <ChevronDown className="size-4" />
-          </button>
-        </span>
-      )}
+        )}
+        {reorderable && !desktop && (
+          <span className="flex shrink-0 text-subtle-foreground">
+            <button
+              type="button"
+              aria-label={`Move ${item.title} up`}
+              disabled={first}
+              onClick={() => moveEvent(id, -1)}
+              className="grid size-10 place-content-center rounded-lg disabled:opacity-25"
+            >
+              <ChevronUp className="size-4" />
+            </button>
+            <button
+              type="button"
+              aria-label={`Move ${item.title} down`}
+              disabled={lastIdx}
+              onClick={() => moveEvent(id, 1)}
+              className="grid size-10 place-content-center rounded-lg disabled:opacity-25"
+            >
+              <ChevronDown className="size-4" />
+            </button>
+          </span>
+        )}
+      </div>
     </li>
   );
 }

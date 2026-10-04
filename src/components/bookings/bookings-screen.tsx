@@ -12,9 +12,11 @@ import { setBookingStatus, syncPayment } from "@/lib/store/actions";
 import { PageHeader } from "@/components/shell/page-header";
 import { SectionHeading } from "@/components/common/section";
 import { EmptyState } from "@/components/common/empty-state";
+import { PlannedActual } from "@/components/common/money";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconChip, type IconTone } from "@/components/ui/icon-chip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useSheets } from "@/components/forms/sheets-provider";
 import type { BookingStatus, CurrencyCode } from "@/lib/types";
@@ -41,11 +43,12 @@ export function BookingsScreen() {
   const tab = (params.get("tab") as Tab) || "all";
   const views = m.bookings;
   const filtered = views.filter((v) => tab === "all" || v.kind === tab || (tab === "activity" && v.kind === "other"));
-  const upcoming = filtered.filter((v) => (v.endDate ?? v.date) >= today);
+  const toBook = views.filter((v) => v.status === "need_to_book" && v.date >= today);
+  const upcoming = filtered.filter((v) => (v.endDate ?? v.date) >= today && !(tab === "all" && toBook.includes(v)));
   const past = filtered.filter((v) => (v.endDate ?? v.date) < today);
   const deadlines = upcomingDeadlines(views, today);
-  const toBook = views.filter((v) => v.status === "need_to_book" && v.date >= today);
   const toPay = views.filter((v) => v.status !== "cancelled").reduce((a, v) => a + v.balance, 0);
+  const workation = trip.workSchedule.enabled && trip.workSchedule.showWorkspaceStays;
 
   const setTab = (t: string) => router.replace(t === "all" ? "/bookings" : `/bookings?tab=${t}`, { scroll: false });
 
@@ -58,69 +61,69 @@ export function BookingsScreen() {
   return (
     <div>
       <PageHeader
-        eyebrow="Bookings"
         title="Bookings"
+        description={`${plural(views.filter((v) => v.status !== "cancelled").length, "booking")} · ${money(toPay, trip.currency)} still to pay`}
         actions={
-          <Button size="sm" variant="outline" onClick={addForTab}>
+          <Button size="sm" variant="outline" onClick={addForTab} aria-label="Add booking">
             <Plus /> <span className="hidden sm:inline">Add booking</span>
           </Button>
         }
-      >
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          {plural(views.filter((v) => v.status !== "cancelled").length, "booking")} · {toBook.length} to book · {money(toPay, trip.currency)} still to pay
-        </p>
-      </PageHeader>
+      />
 
-      <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
+      <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
         <div className="min-w-0">
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="transport">Transport</TabsTrigger>
+              <TabsTrigger value="stay">Stays</TabsTrigger>
+              <TabsTrigger value="activity">Activities</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           {toBook.length > 0 && tab === "all" && (
-            <section className="mb-8">
-              <SectionHeading title="Missing" count={toBook.length} className="mb-2" />
-              <ul className="grid grid-cols-1 gap-2">
+            <section className="mt-6">
+              <SectionHeading title="Still to book" count={toBook.length} className="mb-3" />
+              <ul className="card divide-y">
                 {toBook.map((v) => (
-                  <BookingRow key={v.key} v={v} currency={trip.currency} today={today} highlight workation={trip.workSchedule.enabled && trip.workSchedule.showWorkspaceStays} />
+                  <BookingRow key={v.key} v={v} currency={trip.currency} today={today} workation={workation} />
                 ))}
               </ul>
             </section>
           )}
 
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="w-full sm:w-auto">
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="transport">Transport</TabsTrigger>
-              <TabsTrigger value="stay">Stay</TabsTrigger>
-              <TabsTrigger value="activity">Activities</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
           {filtered.length === 0 ? (
-            <EmptyState
-              icon={tab === "stay" ? Bed : tab === "transport" ? Route : Ticket}
-              title={tab === "transport" ? "No transport booked yet." : tab === "stay" ? "No stays added yet." : "Nothing booked yet."}
-              description={tab === "transport" ? "Add your first route." : "Add bookings to track status, payments and deadlines in one place."}
-              action={<Button onClick={addForTab}>Add</Button>}
-            />
+            <div className="card mt-6">
+              <EmptyState
+                icon={tab === "stay" ? Bed : tab === "transport" ? Route : Ticket}
+                title={tab === "transport" ? "No transport yet" : tab === "stay" ? "No stays yet" : "Nothing booked yet"}
+                description="Add bookings to keep status, payments and deadlines in one place."
+                action={<Button onClick={addForTab}>Add booking</Button>}
+              />
+            </div>
           ) : (
             <>
-              <SectionHeading title="Upcoming" count={upcoming.length} className="mb-2 mt-6" />
-              {upcoming.length ? (
-                <ul className="divide-y rounded-xl border bg-surface">
-                  {upcoming.map((v) => (
-                    <BookingRow key={v.key} v={v} currency={trip.currency} today={today} flat workation={trip.workSchedule.enabled && trip.workSchedule.showWorkspaceStays} />
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-[13px] text-muted-foreground">Nothing upcoming in this view.</p>
-              )}
-              {past.length > 0 && (
-                <>
-                  <SectionHeading title="Past" count={past.length} className="mb-2 mt-8" />
-                  <ul className="divide-y rounded-xl border bg-surface opacity-75">
-                    {past.map((v) => (
-                      <BookingRow key={v.key} v={v} currency={trip.currency} today={today} flat />
+              <section className="mt-6">
+                <SectionHeading title="Upcoming" count={upcoming.length} className="mb-3" />
+                {upcoming.length ? (
+                  <ul className="card divide-y">
+                    {upcoming.map((v) => (
+                      <BookingRow key={v.key} v={v} currency={trip.currency} today={today} workation={workation} />
                     ))}
                   </ul>
-                </>
+                ) : (
+                  <p className="card px-4 py-4 text-[14px] text-muted-foreground">Nothing upcoming here.</p>
+                )}
+              </section>
+              {past.length > 0 && (
+                <section className="mt-8">
+                  <SectionHeading title="Past" count={past.length} className="mb-3" />
+                  <ul className="card divide-y opacity-80">
+                    {past.map((v) => (
+                      <BookingRow key={v.key} v={v} currency={trip.currency} today={today} />
+                    ))}
+                  </ul>
+                </section>
               )}
             </>
           )}
@@ -128,21 +131,21 @@ export function BookingsScreen() {
 
         <aside className="grid min-w-0 grid-cols-1 content-start gap-8">
           <section>
-            <SectionHeading title="Upcoming deadlines" count={deadlines.length} className="mb-2" />
+            <SectionHeading title="Deadlines" count={deadlines.length || undefined} className="mb-3" />
             {deadlines.length === 0 ? (
-              <p className="text-[13px] text-muted-foreground">No deadlines. Everything upcoming is confirmed.</p>
+              <p className="card px-4 py-4 text-[14px] text-muted-foreground">No deadlines — everything upcoming is confirmed.</p>
             ) : (
-              <ol className="grid grid-cols-1 gap-3">
+              <ol className="card divide-y">
                 {deadlines.map((d) => (
-                  <li key={d.key} className="flex gap-3">
-                    <div className={cn("w-12 shrink-0 text-center", d.daysLeft <= 3 ? "text-danger" : "text-foreground")}>
-                      <p className="text-[18px] font-semibold leading-none tabular">{Math.max(0, d.daysLeft)}</p>
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{d.daysLeft === 1 ? "day" : "days"}</p>
+                  <li key={d.key} className="flex items-center gap-4 px-4 py-3.5 lg:px-5">
+                    <div className={cn("w-10 shrink-0 text-center", d.daysLeft <= 3 ? "text-danger" : "text-foreground")}>
+                      <p className="text-[20px] font-semibold leading-none tabular">{Math.max(0, d.daysLeft)}</p>
+                      <p className="mt-0.5 text-[12px] text-muted-foreground">{d.daysLeft === 1 ? "day" : "days"}</p>
                     </div>
-                    <div className="min-w-0 border-l pl-3">
-                      <p className="text-[13px] font-medium leading-snug">{d.label}.</p>
-                      <p className="text-[12px] text-muted-foreground">
-                        {d.view.deadlineLabel ?? "Deadline"} {fmtDayMonth(d.date)} · {money(d.view.price, trip.currency)}
+                    <div className="min-w-0">
+                      <p className="text-[14px] font-medium leading-snug">{d.label}</p>
+                      <p className="text-[13px] text-muted-foreground">
+                        {money(d.view.price, trip.currency)}
                         {d.view.estimated ? " est." : ""}
                       </p>
                     </div>
@@ -152,16 +155,19 @@ export function BookingsScreen() {
             )}
           </section>
           <section>
-            <SectionHeading title="Payments" className="mb-2" />
-            <dl className="grid grid-cols-1 gap-2 text-[13px]">
+            <SectionHeading title="Payments" className="mb-3" />
+            <dl className="card divide-y text-[15px]">
               {(["paid", "partial", "unpaid"] as const).map((s) => {
                 const list = views.filter((v) => v.paymentStatus === s && v.status !== "cancelled");
                 return (
-                  <div key={s} className="flex justify-between">
+                  <div key={s} className="flex justify-between gap-3 px-4 py-3 lg:px-5">
                     <dt className="text-muted-foreground">
-                      {PAYMENT_LABEL[s]} <span className="tabular">({list.length})</span>
+                      {PAYMENT_LABEL[s]} <span className="tabular">· {list.length}</span>
                     </dt>
-                    <dd className="tabular">{money(list.reduce((a, v) => a + (s === "paid" ? v.paid : v.balance), 0), trip.currency)}{s !== "paid" ? " due" : ""}</dd>
+                    <dd className="font-medium tabular">
+                      {money(list.reduce((a, v) => a + (s === "paid" ? v.paid : v.balance), 0), trip.currency)}
+                      {s !== "paid" ? <span className="font-normal text-muted-foreground"> due</span> : ""}
+                    </dd>
                   </div>
                 );
               })}
@@ -173,27 +179,14 @@ export function BookingsScreen() {
   );
 }
 
-function BookingRow({
-  v,
-  currency,
-  today,
-  highlight,
-  flat,
-  workation,
-}: {
-  v: BookingView;
-  currency: CurrencyCode;
-  today: string;
-  highlight?: boolean;
-  flat?: boolean;
-  workation?: boolean;
-}) {
+function BookingRow({ v, currency, today, workation }: { v: BookingView; currency: CurrencyCode; today: string; workation?: boolean }) {
   const sheets = useSheets();
   const router = useRouter();
   const data = useData();
   const trip = useActiveTrip()!;
   const Icon = v.source === "decision" ? Route : KIND_ICON[v.kind];
   const stay = v.source === "accommodation" ? data.accommodations.find((a) => a.id === v.sourceId) : undefined;
+  const tone: IconTone = v.status === "need_to_book" ? "warning" : v.status === "cancelled" ? "danger" : "neutral";
 
   const open = () => {
     switch (v.source) {
@@ -219,69 +212,65 @@ function BookingRow({
   const markPaid = () => {
     if (v.source === "decision") return;
     syncPayment(trip.id, v.source, v.sourceId, v.price, { label: v.title, date: today, location: v.location });
-    toast.success(`${money(v.balance, currency)} recorded in Money`);
+    toast.success(`${money(v.balance, currency)} recorded in Budget`);
   };
 
+  const when = v.source === "event"
+    ? relativeDayLabel(v.date, today) !== fmtDayMonth(v.date) ? relativeDayLabel(v.date, today) : ""
+    : v.endDate
+    ? fmtRange(v.date, v.endDate)
+    : relativeDayLabel(v.date, today) === fmtDayMonth(v.date)
+      ? fmtDayMonth(v.date)
+      : `${relativeDayLabel(v.date, today)} · ${fmtDayMonth(v.date)}`;
+
   return (
-    <li className={cn("flex items-stretch", !flat && "rounded-xl border bg-surface", highlight && "border-warning/40 bg-warning-soft/40")}>
-      <button type="button" onClick={open} className="flex min-w-0 flex-1 items-start gap-3 px-4 py-3 text-left">
-        <span className="mt-0.5 grid size-8 shrink-0 place-content-center rounded-full bg-muted text-muted-foreground">
-          <Icon className="size-4" />
-        </span>
+    <li className="flex items-start">
+      <button type="button" onClick={open} className="flex min-w-0 flex-1 items-start gap-3 py-3.5 pl-4 text-left lg:pl-5">
+        <IconChip icon={Icon} tone={tone} />
         <span className="min-w-0 flex-1">
-          <span className="flex items-baseline justify-between gap-2">
-            <span className="truncate text-[14px] font-semibold tracking-tight">{v.title}</span>
-            <span className="shrink-0 text-[14px] font-medium tabular">
-              {v.estimated && <span className="text-[11px] font-normal text-muted-foreground">from </span>}
-              {money(v.price, currency)}
-            </span>
+          <span className="block truncate text-[15px] font-semibold tracking-tight">{v.title}</span>
+          <span className="block truncate text-[13px] text-muted-foreground">
+            {[when, v.subtitle].filter(Boolean).join(" · ")}
           </span>
-          <span className="mt-0.5 block truncate text-[12px] text-muted-foreground">
-            {v.endDate ? fmtRange(v.date, v.endDate) : relativeDayLabel(v.date, today) === fmtDayMonth(v.date) ? fmtDayMonth(v.date) : `${fmtDayMonth(v.date)} · ${relativeDayLabel(v.date, today)}`}
-            {v.subtitle ? ` · ${v.subtitle}` : ""}
-          </span>
-          <span className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
             <Badge tone={STATUS_TONE[v.status]}>
               {v.status === "confirmed" ? <Check /> : v.status === "need_to_book" ? <CalendarClock /> : v.status === "cancelled" ? <X /> : <CircleDashed />}
               {v.source === "decision" ? "Not decided" : STATUS_LABEL[v.status]}
             </Badge>
-            {v.source !== "decision" && v.price > 0 && (
-              <Badge tone={v.paymentStatus === "paid" ? "outline" : "neutral"}>
-                {PAYMENT_LABEL[v.paymentStatus]}
-                {v.paymentStatus === "partial" ? ` · ${money(v.balance, currency)} due` : ""}
-              </Badge>
+            {v.price > 0 && (
+              <PlannedActual planned={v.price} actual={v.paid} currency={currency} plannedLabel={v.estimated ? "From" : "Planned"} />
             )}
-            {stay && workation && (
-              <>
-                <Badge tone={stay.wifi?.available ? "info" : "warning"}>
-                  {stay.wifi?.available ? <Wifi /> : <WifiOff />}
-                  {stay.wifi?.available ? (stay.wifi.speedMbps ? `${stay.wifi.speedMbps} Mbps` : "Wi-Fi") : "No Wi-Fi info"}
-                </Badge>
-                <Badge tone={stay.workspace ? "info" : "neutral"}>
-                  <Laptop /> {stay.workspace ? "Workspace" : "No desk"}
-                </Badge>
-              </>
-            )}
-            {v.reference && <span className="truncate text-[11px] text-subtle-foreground">{v.reference}</span>}
           </span>
+          {stay && workation && (
+            <span className="mt-1.5 flex flex-wrap gap-x-3 text-[13px] text-muted-foreground">
+              <span className="flex items-center gap-1">
+                {stay.wifi?.available ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
+                {stay.wifi?.available ? (stay.wifi.speedMbps ? `${stay.wifi.speedMbps} Mbps` : "Wi-Fi") : "No Wi-Fi info"}
+              </span>
+              <span className="flex items-center gap-1">
+                <Laptop className="size-3.5" /> {stay.workspace ? "Workspace" : "No desk"}
+              </span>
+            </span>
+          )}
+          {v.reference && <span className="mt-1 block truncate text-[12px] text-subtle-foreground">Ref {v.reference}</span>}
         </span>
       </button>
-      <div className="flex items-start pr-2 pt-2.5">
+      <div className="flex shrink-0 items-start px-2 pt-3">
         {v.source === "decision" ? (
-          <Button variant="ghost" size="sm" onClick={open}>
+          <Button variant="ghost" size="sm" onClick={open} className="text-accent-foreground">
             <Scale /> Compare
           </Button>
         ) : (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${v.title}`}>
+              <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground" aria-label={`Actions for ${v.title}`}>
                 <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {v.status !== "confirmed" && (
                 <DropdownMenuItem onSelect={() => status("confirmed")}>
-                  <Check /> Mark confirmed
+                  <Check /> Mark booked
                 </DropdownMenuItem>
               )}
               {v.status !== "pending" && (

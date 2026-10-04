@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 export function Label({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
   return (
     <LabelPrimitive.Root
-      className={cn("text-[13px] font-medium leading-none text-foreground select-none", className)}
+      className={cn("text-[14px] font-medium leading-none text-foreground select-none lg:text-[13px]", className)}
       {...props}
     />
   );
@@ -30,18 +30,18 @@ export function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className={cn("grid grid-cols-1 gap-1.5", className)}>
+    <div className={cn("grid min-w-0 grid-cols-1 content-start gap-2", className)}>
       <Label htmlFor={htmlFor} className="flex items-center gap-1.5">
         {label}
         {optional && <span className="font-normal text-subtle-foreground">optional</span>}
       </Label>
       {children}
       {error ? (
-        <p role="alert" className="text-[12px] text-danger">
+        <p role="alert" className="text-[13px] text-danger">
           {error}
         </p>
       ) : hint ? (
-        <p className="text-[12px] text-muted-foreground">{hint}</p>
+        <p className="text-[13px] text-muted-foreground">{hint}</p>
       ) : null}
     </div>
   );

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { GraduationCap, Trash2 } from "lucide-react";
 import { ResponsiveSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/label";
@@ -69,6 +69,8 @@ export function ExamSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={existing ? "Edit exam" : "Add exam"}
+        icon={GraduationCap}
+        iconTone="accent"
       footer={
         <>
           {existing && (

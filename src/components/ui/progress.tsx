@@ -27,7 +27,7 @@ export function Meter({
       <div
         className={cn(
           "h-full rounded-full transition-[width] duration-500",
-          tone === "default" && "bg-foreground",
+          tone === "default" && "bg-accent",
           tone === "positive" && "bg-positive",
           tone === "warning" && "bg-warning",
           tone === "danger" && "bg-danger",
@@ -37,7 +37,7 @@ export function Meter({
       {marker !== undefined && (
         <div
           aria-hidden
-          className="absolute -top-1 h-3.5 w-px bg-foreground/60"
+          className="absolute -top-1 h-[calc(100%+8px)] w-0.5 rounded-full bg-foreground/70"
           style={{ left: `${clamp(marker, 0, 1) * 100}%` }}
         />
       )}

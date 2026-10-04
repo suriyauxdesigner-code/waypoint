@@ -3,7 +3,7 @@
 import * as React from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Layers, Trash2 } from "lucide-react";
 import { ResponsiveSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/label";
@@ -85,7 +85,9 @@ export function PhaseSheet({
         open={open}
         onOpenChange={onOpenChange}
         title={existing ? "Edit phase" : "New phase"}
-        description="Phases split a trip into chapters with their own purpose and budget."
+        description="A chapter of your trip with its own budget"
+        icon={Layers}
+        iconTone="accent"
         footer={
           <>
             {existing && (

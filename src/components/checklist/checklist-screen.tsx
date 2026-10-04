@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { BookmarkPlus, Copy, MoreHorizontal, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { BookmarkPlus, Copy, ListChecks, MoreHorizontal, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useActiveTrip, useData, useToday } from "@/lib/store/hooks";
 import {
   applyTemplate,
@@ -54,12 +54,12 @@ export function ChecklistScreen() {
   return (
     <div>
       <PageHeader
-        eyebrow="Checklist"
         title="Checklist"
+        description="What to pack and what to buy"
         actions={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Checklist options">
+              <Button variant="outline" size="icon" className="rounded-full" aria-label="Checklist options">
                 <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
@@ -101,17 +101,16 @@ export function ChecklistScreen() {
         }
       />
 
-      <section className="mt-4 lg:mt-6" aria-label="Packing progress">
+      <section className="card mt-6 p-4 lg:p-5" aria-label="Packing progress">
         <div className="flex items-baseline justify-between">
           <p className="text-[28px] font-semibold tracking-tight tabular">
-            {progress.packed} <span className="text-muted-foreground">/ {progress.total}</span>
-            <span className="ml-2 text-[14px] font-normal text-muted-foreground">packed</span>
+            {progress.packed} <span className="text-[17px] font-normal text-muted-foreground">of {progress.total} packed</span>
           </p>
-          <p className="text-[15px] font-semibold tabular">{pct(progress.ratio)}</p>
+          <p className="text-[15px] font-semibold tabular text-muted-foreground">{pct(progress.ratio)}</p>
         </div>
         <Meter value={progress.ratio} tone={progress.ratio === 1 ? "positive" : "default"} className="mt-3 h-2" label="Packed" />
         {shop.count > 0 && (
-          <p className="mt-3 flex items-center gap-2 text-[13px] text-muted-foreground">
+          <p className="mt-3 flex items-center gap-2 border-t pt-3 text-[14px] text-muted-foreground">
             <ShoppingBag className="size-4" />
             {shop.count} to buy · about {money(shop.estimated, c)}
             {shop.inBudget > 0 && ` · ${money(shop.inBudget, c)} counted in your budget`}
@@ -119,7 +118,7 @@ export function ChecklistScreen() {
         )}
       </section>
 
-      <div className="sticky top-0 z-10 -mx-4 mt-6 bg-background/95 px-4 py-2 backdrop-blur sm:mx-0 sm:px-0">
+      <div className="sticky top-0 z-10 -mx-4 mt-4 bg-background/90 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
         <Segmented
           value={filter}
           onChange={setFilter}
@@ -134,28 +133,30 @@ export function ChecklistScreen() {
       </div>
 
       {items.length === 0 ? (
+        <div className="card mt-2">
         <EmptyState
-          icon={ShoppingBag}
+          icon={ListChecks}
           title="Your list is empty"
           description="Start from a template or add the first thing you can’t travel without."
           action={<Button onClick={() => setEditing({ section: "Documents" })}><Plus /> Add item</Button>}
         />
+        </div>
       ) : groups.length === 0 ? (
-        <p className="py-10 text-center text-[14px] text-muted-foreground">{filter === "pack" ? "Everything’s packed. Nice." : "Nothing left to buy."}</p>
+        <p className="card mt-2 px-4 py-10 text-center text-[15px] text-muted-foreground">{filter === "pack" ? "Everything’s packed. Nice." : "Nothing left to buy."}</p>
       ) : (
-        <div className="mt-4 grid gap-8 lg:grid-cols-2 lg:gap-x-12">
+        <div className="mt-2 grid items-start gap-4 lg:grid-cols-2 lg:gap-5">
           {groups.map(([section, list]) => {
             const all = items.filter((i) => i.section === section);
             const done = all.filter((i) => i.packed).length;
             return (
-              <section key={section} aria-label={section}>
-                <div className="flex items-center justify-between border-b pb-1.5">
-                  <h2 className="eyebrow !text-foreground">{section}</h2>
-                  <span className="text-[12px] tabular text-muted-foreground">
+              <section key={section} aria-label={section} className="card">
+                <div className="flex min-h-12 items-center justify-between border-b px-4 lg:px-5">
+                  <h2 className="text-[16px] font-semibold tracking-tight">{section}</h2>
+                  <span className="text-[14px] tabular text-muted-foreground">
                     {done}/{all.length}
                   </span>
                 </div>
-                <ul className="divide-y">
+                <ul className="divide-y px-4 lg:px-5">
                   {list.map((i) => (
                     <ItemRow key={i.id} item={i} currency={c} onEdit={() => setEditing(i)} onBuy={() => setBuying(i)} />
                   ))}
@@ -168,7 +169,7 @@ export function ChecklistScreen() {
       )}
 
       {items.length > 0 && (
-        <Button variant="outline" className="mt-10" onClick={() => setEditing({ section: "" })}>
+        <Button variant="outline" className="mt-6 w-full sm:w-auto" onClick={() => setEditing({ section: "" })}>
           <Plus /> Add item to a new section
         </Button>
       )}
@@ -183,21 +184,21 @@ function ItemRow({ item, currency, onEdit, onBuy }: { item: ChecklistItem; curre
   return (
     <li className="flex items-center gap-1">
       <label className="flex min-h-12 cursor-pointer items-center pl-0.5 pr-2.5" aria-label={`${item.packed ? "Unpack" : "Pack"} ${item.name}`}>
-        <Checkbox checked={item.packed} onCheckedChange={() => togglePacked(item.id)} className="size-[22px]" />
+        <Checkbox checked={item.packed} onCheckedChange={() => togglePacked(item.id)} className="size-6" />
       </label>
       <button type="button" onClick={onEdit} className="flex min-h-12 min-w-0 flex-1 items-center gap-2 py-2 text-left">
         <span className="min-w-0 flex-1">
-          <span className={cn("block truncate text-[15px] lg:text-[14px]", item.packed && "text-muted-foreground line-through decoration-border-strong")}>
+          <span className={cn("block truncate text-[15px]", item.packed && "text-muted-foreground line-through decoration-border-strong")}>
             {item.name}
             {item.quantity > 1 && <span className="ml-1.5 text-[12px] tabular text-muted-foreground">×{item.quantity}</span>}
           </span>
-          {item.notes && <span className="block truncate text-[12px] text-subtle-foreground">{item.notes}</span>}
+          {item.notes && <span className="block truncate text-[13px] text-muted-foreground">{item.notes}</span>}
         </span>
         {item.actualCost !== undefined && !item.needToBuy && <span className="text-[12px] tabular text-muted-foreground">{money(item.actualCost, currency)}</span>}
       </button>
       {item.needToBuy && (
         <button type="button" onClick={onBuy} className="shrink-0" aria-label={`Mark ${item.name} as bought`}>
-          <Badge tone="warning" className="h-7 px-2.5">
+          <Badge tone="warning" className="h-8 px-3 text-[13px]">
             Buy{item.estimatedCost ? ` · ${money(item.estimatedCost * Math.max(1, item.quantity), currency)}` : ""}
           </Badge>
         </button>
@@ -216,15 +217,15 @@ function QuickAdd({ section, onAdd }: { section: string; onAdd: (name: string) =
         onAdd(value.trim());
         setValue("");
       }}
-      className="flex items-center gap-2 pt-1"
+      className="flex items-center gap-3 border-t px-4 py-1 lg:px-5"
     >
-      <Plus className="ml-1 size-4 shrink-0 text-subtle-foreground" />
+      <Plus className="ml-0.5 size-5 shrink-0 text-subtle-foreground" />
       <input
         aria-label={`Add item to ${section}`}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={`Add to ${section}`}
-        className="h-10 flex-1 bg-transparent text-[14px] outline-none placeholder:text-subtle-foreground"
+        className="h-11 min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-subtle-foreground lg:text-[15px]"
       />
       {value && (
         <Button type="submit" size="sm" variant="secondary">
@@ -297,6 +298,8 @@ function ItemSheet({
       open={open}
       onOpenChange={close}
       title={existing ? "Edit item" : "Add item"}
+      icon={ListChecks}
+      iconTone="accent"
       footer={
         <>
           {existing && (
@@ -335,23 +338,23 @@ function ItemSheet({
             ))}
           </datalist>
         </Field>
-        <div className="rounded-lg border">
-          <div className="flex items-center justify-between gap-3 px-3.5 py-3">
-            <label htmlFor="ci-buy" className="text-[13px] font-medium">
+        <div className="rounded-2xl border">
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <label htmlFor="ci-buy" className="text-[15px] font-medium">
               Need to buy
-              <span className="block text-[12px] font-normal text-muted-foreground">Track it as a planned purchase</span>
+              <span className="block text-[13px] font-normal text-muted-foreground">Track it as a planned purchase</span>
             </label>
             <Switch id="ci-buy" checked={needToBuy} onCheckedChange={setNeedToBuy} />
           </div>
           {needToBuy && (
-            <div className="grid grid-cols-1 gap-3 border-t px-3.5 py-3">
+            <div className="grid grid-cols-1 gap-3 border-t px-4 py-3">
               <Field label="Estimated cost (each)" htmlFor="ci-est" error={errors.est}>
                 <MoneyInput id="ci-est" symbol={currencySymbol(currency)} value={est} onChange={(e) => setEst(e.target.value)} />
               </Field>
               <div className="flex items-center justify-between gap-3">
-                <label htmlFor="ci-budget" className="text-[13px]">
+                <label htmlFor="ci-budget" className="text-[15px]">
                   Count it in the trip budget
-                  <span className="block text-[12px] text-muted-foreground">Reserved under Shopping until you buy it</span>
+                  <span className="block text-[13px] text-muted-foreground">Reserved under Shopping until you buy it</span>
                 </label>
                 <Switch id="ci-budget" checked={inBudget} onCheckedChange={setInBudget} />
               </div>
@@ -384,7 +387,9 @@ function BuySheet({ item, tripId, today, currency, onClose }: { item: ChecklistI
       open={open}
       onOpenChange={close}
       title={`Bought ${item.name}?`}
-      description="Logs it under Shopping and takes it off your to-buy list."
+      icon={ShoppingBag}
+      iconTone="accent"
+      description="Logs it as an expense and ticks it off"
       footer={
         <Button
           size="lg"

@@ -1,8 +1,9 @@
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
+import { IconChip } from "@/components/ui/icon-chip";
 
 export function EmptyState({
-  icon: Icon,
+  icon,
   title,
   description,
   action,
@@ -17,15 +18,11 @@ export function EmptyState({
   compact?: boolean;
 }) {
   return (
-    <div className={cn("flex flex-col items-center text-center", compact ? "py-6" : "py-14", className)}>
-      {Icon && (
-        <div className="mb-3 grid size-10 place-content-center rounded-full bg-muted text-muted-foreground">
-          <Icon className="size-5" />
-        </div>
-      )}
-      <p className="text-[15px] font-medium">{title}</p>
-      {description && <p className="mt-1 max-w-xs text-[13px] text-muted-foreground">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
+    <div className={cn("flex flex-col items-center px-6 text-center", compact ? "py-8" : "py-14", className)}>
+      {icon && <IconChip icon={icon} size="lg" className="mb-4" />}
+      <p className="text-[16px] font-semibold tracking-tight">{title}</p>
+      {description && <p className="mt-1 max-w-xs text-[14px] leading-relaxed text-muted-foreground">{description}</p>}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }

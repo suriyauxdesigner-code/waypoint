@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Route, Trash2 } from "lucide-react";
 import { ResponsiveSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/label";
@@ -64,7 +64,9 @@ export function OptionSheet({
       onOpenChange={close}
       wide
       title={option ? `Edit “${option.label}”` : "Add an option"}
-      description="Include every leg and the hidden costs — station transfers, food, baggage."
+      description="Every leg plus hidden costs"
+      icon={Route}
+      iconTone="accent"
       footer={
         <>
           {option && (
@@ -101,7 +103,7 @@ export function OptionSheet({
                   aria-checked={comfort === n}
                   onClick={() => setComfort(n)}
                   className={cn(
-                    "h-11 flex-1 rounded-md border text-[13px] font-medium tabular lg:h-10",
+                    "h-11 flex-1 rounded-xl border text-[14px] font-medium tabular lg:h-10",
                     comfort === n ? "border-primary bg-primary text-primary-foreground" : "bg-surface hover:bg-muted",
                   )}
                 >

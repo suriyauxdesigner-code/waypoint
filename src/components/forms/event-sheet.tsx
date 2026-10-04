@@ -3,7 +3,7 @@
 import * as React from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { StickyNote, Ticket, Trash2 } from "lucide-react";
 import { ResponsiveSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/label";
@@ -16,9 +16,8 @@ import { useZodForm } from "@/lib/use-form";
 import { eventWorkOverlap } from "@/lib/calc/work";
 import { EVENT_TYPE_LABEL } from "@/lib/calc/timeline";
 import { currencySymbol } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import type { BookingStatus, EventType } from "@/lib/types";
-import { BookingFields, WorkConflictNotice, type BookingFieldValues } from "./shared";
+import { BookingFields, ChoiceChips, FieldRow, MoreDetails, WorkConflictNotice, type BookingFieldValues } from "./shared";
 import type { SheetRequest } from "./sheets-provider";
 import { paidFor } from "@/lib/calc/bookings";
 import { toMinutes } from "@/lib/calc/dates";
@@ -85,6 +84,7 @@ export function EventSheet({
     paid: existing ? String(paidFor(data.expenses, "event", existing.id) || "") : "",
   });
   const [ack, setAck] = React.useState(!!existing?.keepDespiteWork);
+  const [more, setMore] = React.useState(!!existing && (!!existing.location || !!existing.notes || !!existing.booking));
 
   const overlap =
     trip && !values.anytime && values.type !== "work_session"
@@ -106,10 +106,6 @@ export function EventSheet({
 
   const submit = form.handleSubmit((v) => {
     const cost = v.cost ? Math.round(Number(v.cost)) : undefined;
-    if (v.needsBooking && (Number(booking.paid) || 0) > (cost ?? 0)) {
-      form.setErrors({ paid: "Paid can't exceed the cost" });
-      return;
-    }
     const id = saveEvent({
       id: existing?.id,
       tripId: trip.id,
@@ -133,7 +129,7 @@ export function EventSheet({
         : undefined,
     });
     if (v.needsBooking) {
-      syncPayment(trip.id, "event", id, Math.min(Number(booking.paid) || 0, cost ?? 0), {
+      syncPayment(trip.id, "event", id, Number(booking.paid) || 0, {
         label: v.title,
         date: today,
         location: v.location || undefined,
@@ -153,11 +149,16 @@ export function EventSheet({
 
   const needsChoice = overlap > 0 && !ack;
 
+  const TypeIcon = EVENT_ICONS[values.type] ?? (isNote ? StickyNote : Ticket);
+
   return (
     <ResponsiveSheet
       open={open}
       onOpenChange={onOpenChange}
-      title={existing ? `Edit ${isNote ? "note" : "plan"}` : isNote ? "Add note" : "Add to timeline"}
+      icon={TypeIcon}
+      iconTone="accent"
+      title={existing ? `Edit ${isNote ? "note" : "plan"}` : isNote ? "Add a note" : "Add a plan"}
+      description={isNote ? "A reminder on a day" : "Something to do, eat or see"}
       footer={
         <>
           {existing && (
@@ -166,32 +167,18 @@ export function EventSheet({
             </Button>
           )}
           <Button type="submit" form="event-form" size="lg" className="lg:h-10">
-            {needsChoice ? "Save anyway" : existing ? "Save changes" : "Add"}
+            {needsChoice ? "Save anyway" : existing ? "Save" : "Add"}
           </Button>
         </>
       }
     >
-      <form id="event-form" onSubmit={submit} className="grid grid-cols-1 gap-4" noValidate>
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-5 px-5 lg:mx-0 lg:px-0 lg:flex-wrap">
-          {TYPES.map((t) => {
-            const Icon = EVENT_ICONS[t];
-            const on = values.type === t;
-            return (
-              <button
-                key={t}
-                type="button"
-                aria-pressed={on}
-                onClick={() => set("type", t)}
-                className={cn(
-                  "flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium transition-colors",
-                  on ? "border-primary bg-primary text-primary-foreground" : "bg-surface hover:bg-muted",
-                )}
-              >
-                <Icon className="size-3.5" /> {EVENT_TYPE_LABEL[t]}
-              </button>
-            );
-          })}
-        </div>
+      <form id="event-form" onSubmit={submit} className="grid grid-cols-1 gap-5" noValidate>
+        <ChoiceChips
+          label="Type"
+          value={values.type}
+          onChange={(t) => set("type", t)}
+          options={TYPES.map((t) => ({ value: t, label: EVENT_TYPE_LABEL[t], icon: EVENT_ICONS[t] }))}
+        />
 
         <Field label={isNote ? "Note" : "What"} htmlFor="ev-title" error={errors.title}>
           <Input
@@ -204,35 +191,29 @@ export function EventSheet({
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field
-            label="Date"
-            htmlFor="ev-date"
-            error={errors.date}
-            hint={outsideTrip ? "Outside your trip dates" : undefined}
-            className="col-span-2 sm:col-span-1"
-          >
-            <Input id="ev-date" type="date" value={values.date} min={trip.startDate} max={trip.endDate} onChange={(e) => set("date", e.target.value)} />
-          </Field>
-          <div className="col-span-2 flex items-center justify-between gap-3 self-end rounded-md border px-3 h-11 lg:h-10 sm:col-span-1">
-            <label htmlFor="ev-anytime" className="text-[13px] font-medium">
+        <Field label="Date" htmlFor="ev-date" error={errors.date} hint={outsideTrip ? "Outside your trip dates" : undefined}>
+          <Input id="ev-date" type="date" value={values.date} min={trip.startDate} max={trip.endDate} onChange={(e) => set("date", e.target.value)} />
+        </Field>
+
+        <div className="grid gap-3">
+          <div className="flex min-h-12 items-center justify-between gap-3 rounded-2xl bg-muted px-4 py-2">
+            <label htmlFor="ev-anytime" className="text-[15px] font-medium">
               Anytime
-              <span className="block text-[11px] font-normal text-muted-foreground">No fixed time</span>
+              <span className="block text-[13px] font-normal text-muted-foreground">No fixed time that day</span>
             </label>
             <Switch id="ev-anytime" checked={values.anytime} onCheckedChange={(c) => set("anytime", c)} />
           </div>
+          {!values.anytime && (
+            <FieldRow>
+              <Field label="Starts" htmlFor="ev-start" error={errors.startTime}>
+                <Input id="ev-start" ref={startRef} type="time" value={values.startTime} aria-invalid={!!errors.startTime} onChange={(e) => set("startTime", e.target.value)} />
+              </Field>
+              <Field label="Ends" htmlFor="ev-end" optional error={errors.endTime}>
+                <Input id="ev-end" type="time" value={values.endTime} aria-invalid={!!errors.endTime} onChange={(e) => set("endTime", e.target.value)} />
+              </Field>
+            </FieldRow>
+          )}
         </div>
-
-        {!values.anytime && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Start" htmlFor="ev-start" error={errors.startTime}>
-              <Input id="ev-start" ref={startRef} type="time" value={values.startTime} aria-invalid={!!errors.startTime} onChange={(e) => set("startTime", e.target.value)} />
-            </Field>
-            <Field label="End" htmlFor="ev-end" optional error={errors.endTime}>
-              <Input id="ev-end" type="time" value={values.endTime} aria-invalid={!!errors.endTime} onChange={(e) => set("endTime", e.target.value)} />
-            </Field>
-          </div>
-        )}
 
         <WorkConflictNotice
           minutes={trip.workSchedule.protectWorkHours ? overlap : 0}
@@ -245,44 +226,49 @@ export function EventSheet({
         />
 
         {!isNote && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Location" htmlFor="ev-loc" optional className="col-span-2 sm:col-span-1">
+          <Field label="Planned cost" htmlFor="ev-cost" optional error={errors.cost} hint="What you expect to spend — logged expenses show the actual">
+            <MoneyInput id="ev-cost" symbol={symbol} placeholder="0" value={values.cost} onChange={(e) => set("cost", e.target.value)} />
+          </Field>
+        )}
+
+        <MoreDetails
+          open={more || !!errors.paid}
+          onToggle={() => setMore((m) => !m)}
+          summary={isNote ? "Notes" : "Location, notes, booking & payment"}
+        >
+          {!isNote && (
+            <Field label="Location" htmlFor="ev-loc" optional>
               <Input id="ev-loc" placeholder="Where" value={values.location} onChange={(e) => set("location", e.target.value)} />
             </Field>
-            <Field label="Expected cost" htmlFor="ev-cost" optional error={errors.cost} className="col-span-2 sm:col-span-1">
-              <MoneyInput id="ev-cost" symbol={symbol} placeholder="0" value={values.cost} onChange={(e) => set("cost", e.target.value)} />
-            </Field>
-          </div>
-        )}
-
-        <Field label="Notes" htmlFor="ev-notes" optional>
-          <Textarea id="ev-notes" rows={2} value={values.notes} onChange={(e) => set("notes", e.target.value)} />
-        </Field>
-
-        {!isNote && (
-          <div className="rounded-lg border">
-            <div className="flex items-center justify-between gap-3 px-3.5 py-3">
-              <label htmlFor="ev-booking" className="text-[13px] font-medium">
-                Needs a booking
-                <span className="block text-[12px] font-normal text-muted-foreground">Track it in Bookings with status and payment</span>
-              </label>
-              <Switch id="ev-booking" checked={values.needsBooking} onCheckedChange={(c) => set("needsBooking", c)} />
-            </div>
-            {values.needsBooking && (
-              <div className="border-t px-3.5 py-3.5">
-                <BookingFields
-                  values={booking}
-                  set={(k, v) => setBooking((b) => ({ ...b, [k]: v }))}
-                  total={Number(values.cost) || 0}
-                  symbol={symbol}
-                  idPrefix="ev"
-                  deadlineLabel="Book / confirm by"
-                  errors={errors}
-                />
+          )}
+          <Field label="Notes" htmlFor="ev-notes" optional>
+            <Textarea id="ev-notes" rows={2} value={values.notes} onChange={(e) => set("notes", e.target.value)} />
+          </Field>
+          {!isNote && (
+            <div className="rounded-2xl border">
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <label htmlFor="ev-booking" className="text-[15px] font-medium">
+                  Needs booking or payment
+                  <span className="block text-[13px] font-normal text-muted-foreground">Track status and what you actually paid</span>
+                </label>
+                <Switch id="ev-booking" checked={values.needsBooking} onCheckedChange={(c) => set("needsBooking", c)} />
               </div>
-            )}
-          </div>
-        )}
+              {values.needsBooking && (
+                <div className="border-t px-4 py-4">
+                  <BookingFields
+                    values={booking}
+                    set={(k, v) => setBooking((b) => ({ ...b, [k]: v }))}
+                    total={Number(values.cost) || 0}
+                    symbol={symbol}
+                    idPrefix="ev"
+                    deadlineLabel="Book / confirm by"
+                    errors={errors}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </MoreDetails>
       </form>
     </ResponsiveSheet>
   );

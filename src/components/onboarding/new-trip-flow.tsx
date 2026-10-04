@@ -143,10 +143,10 @@ export function NewTripFlow() {
 
       <div className="flex gap-1" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
         {STEPS.map((s, i) => (
-          <span key={s} className={cn("h-1 flex-1 rounded-full transition-colors", i <= step ? "bg-foreground" : "bg-border")} />
+          <span key={s} className={cn("h-1.5 flex-1 rounded-full transition-colors", i <= step ? "bg-accent" : "bg-border")} />
         ))}
       </div>
-      <p className="eyebrow mt-6">
+      <p className="mt-6 text-[14px] font-medium text-muted-foreground">
         Step {step + 1} of {STEPS.length}
         {optional && " · optional"}
       </p>
@@ -154,8 +154,8 @@ export function NewTripFlow() {
       <main className="flex-1 pb-36 pt-2">
         {step === 0 && (
           <section>
-            <h1 className="text-[26px] font-semibold tracking-tight">Where are you going?</h1>
-            <p className="mt-1 text-[14px] text-muted-foreground">Add stops in order. You can change the route any time.</p>
+            <h1 className="text-[28px] font-semibold leading-tight tracking-tight">Where are you going?</h1>
+            <p className="mt-2 text-[15px] text-muted-foreground">Add stops in order. You can change the route any time.</p>
             <form
               className="mt-6 flex gap-2"
               onSubmit={(e) => {
@@ -169,15 +169,15 @@ export function NewTripFlow() {
                   <option key={k} value={k.replace(/\b\w/g, (c) => c.toUpperCase())} />
                 ))}
               </datalist>
-              <Button type="submit" variant="outline" aria-label="Add destination">
+              <Button type="submit" variant="outline" className="h-12 lg:h-10" aria-label="Add destination">
                 <Plus /> Add
               </Button>
             </form>
             {destinations.length > 0 && (
-              <ol className="mt-5 grid gap-1">
+              <ol className="mt-5 grid gap-2">
                 {destinations.map((d, i) => (
-                  <li key={d} className="flex items-center gap-3 rounded-lg border bg-surface px-3 py-2.5">
-                    <span className="grid size-6 place-content-center rounded-full bg-muted text-[12px] font-medium tabular">{i + 1}</span>
+                  <li key={d} className="card flex min-h-14 items-center gap-3 px-3 py-2">
+                    <span className="grid size-8 place-content-center rounded-full bg-accent-soft text-[13px] font-semibold tabular text-accent-foreground">{i + 1}</span>
                     <MapPin className="size-4 text-muted-foreground" />
                     <span className="flex-1 text-[15px]">{d}</span>
                     <Button variant="ghost" size="icon-sm" aria-label={`Remove ${d}`} onClick={() => setDestinations((ds) => ds.filter((x) => x !== d))}>
@@ -192,8 +192,8 @@ export function NewTripFlow() {
 
         {step === 1 && (
           <section>
-            <h1 className="text-[26px] font-semibold tracking-tight">When?</h1>
-            <p className="mt-1 text-[14px] text-muted-foreground">Rough dates are fine.</p>
+            <h1 className="text-[28px] font-semibold leading-tight tracking-tight">When?</h1>
+            <p className="mt-2 text-[15px] text-muted-foreground">Rough dates are fine.</p>
             <div className="mt-6 grid grid-cols-2 gap-3">
               <Field label="Start date" htmlFor="n-start">
                 <Input id="n-start" type="date" value={start} onChange={(e) => setStart(e.target.value)} />
@@ -208,7 +208,7 @@ export function NewTripFlow() {
 
         {step === 2 && (
           <section>
-            <h1 className="text-[26px] font-semibold tracking-tight">What’s this trip for?</h1>
+            <h1 className="text-[28px] font-semibold leading-tight tracking-tight">What’s this trip for?</h1>
             <div className="mt-6 grid gap-2" role="radiogroup" aria-label="Trip purpose">
               {TRIP_PURPOSES.map((p) => (
                 <button
@@ -218,15 +218,15 @@ export function NewTripFlow() {
                   aria-checked={purpose === p}
                   onClick={() => setPurpose(p)}
                   className={cn(
-                    "flex items-center justify-between gap-3 rounded-lg border px-4 py-3.5 text-left transition-colors",
-                    purpose === p ? "border-foreground bg-surface ring-1 ring-foreground" : "bg-surface hover:bg-muted",
+                    "card flex items-center justify-between gap-3 px-4 py-4 text-left transition-colors",
+                    purpose === p ? "ring-2 ring-accent" : "hover:bg-surface-2",
                   )}
                 >
                   <span>
                     <span className="block text-[15px] font-medium">{PURPOSE_LABEL[p]}</span>
-                    <span className="block text-[13px] text-muted-foreground">{PURPOSE_HINT[p]}</span>
+                    <span className="block text-[14px] text-muted-foreground">{PURPOSE_HINT[p]}</span>
                   </span>
-                  <span className={cn("size-4 shrink-0 rounded-full border-2", purpose === p ? "border-foreground bg-foreground" : "border-border-strong")} />
+                  <span className={cn("size-5 shrink-0 rounded-full border-2", purpose === p ? "border-accent bg-accent shadow-[inset_0_0_0_3px_var(--surface)]" : "border-border-strong")} />
                 </button>
               ))}
             </div>
@@ -235,8 +235,8 @@ export function NewTripFlow() {
 
         {step === 3 && (
           <section>
-            <h1 className="text-[26px] font-semibold tracking-tight">What’s your budget?</h1>
-            <p className="mt-1 text-[14px] text-muted-foreground">We’ll split it into categories you can adjust.</p>
+            <h1 className="text-[28px] font-semibold leading-tight tracking-tight">What’s your budget?</h1>
+            <p className="mt-2 text-[15px] text-muted-foreground">We’ll split it into categories you can adjust.</p>
             <div className="mt-6 grid gap-4">
               <Field label="Currency" htmlFor="n-cur">
                 <Select id="n-cur" value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>
@@ -261,8 +261,8 @@ export function NewTripFlow() {
 
         {step === 4 && (
           <section>
-            <h1 className="text-[26px] font-semibold tracking-tight">Will you be working during this trip?</h1>
-            <p className="mt-1 text-[14px] text-muted-foreground">We’ll protect your work hours when you plan activities and transport.</p>
+            <h1 className="text-[28px] font-semibold leading-tight tracking-tight">Will you be working during this trip?</h1>
+            <p className="mt-2 text-[15px] text-muted-foreground">We’ll protect your work hours when you plan activities and transport.</p>
             <div className="mt-6 grid grid-cols-2 gap-2">
               {[true, false].map((v) => (
                 <button
@@ -274,8 +274,8 @@ export function NewTripFlow() {
                     setWork((w) => ({ ...w, enabled: v }));
                   }}
                   className={cn(
-                    "flex h-20 flex-col items-center justify-center gap-1 rounded-lg border text-[15px] font-medium transition-colors",
-                    workAnswered === v ? "border-foreground bg-surface ring-1 ring-foreground" : "bg-surface hover:bg-muted",
+                    "card flex h-24 flex-col items-center justify-center gap-1.5 text-[15px] font-medium transition-colors",
+                    workAnswered === v ? "ring-2 ring-accent" : "hover:bg-surface-2",
                   )}
                 >
                   {v ? <Briefcase className="size-5" /> : <span className="text-xl">🌴</span>}
@@ -293,19 +293,19 @@ export function NewTripFlow() {
 
         {step === 5 && (
           <section>
-            <h1 className="text-[26px] font-semibold tracking-tight">Ready to go</h1>
+            <h1 className="text-[28px] font-semibold leading-tight tracking-tight">Ready to go</h1>
             <div className="mt-6 grid gap-4">
               <Field label="Trip name" htmlFor="n-name">
                 <Input id="n-name" value={name} placeholder={suggestedName} onChange={(e) => setName(e.target.value)} />
               </Field>
-              <dl className="divide-y rounded-lg border bg-surface text-[14px]">
+              <dl className="card divide-y text-[15px]">
                 <Row label="Route" value={destinations.length ? destinations.join(" → ") : "Add later"} onEdit={() => setStep(0)} />
                 <Row label="Dates" value={days ? `${fmtRange(start, end)} · ${days} days` : "—"} onEdit={() => setStep(1)} />
                 <Row label="Purpose" value={PURPOSE_LABEL[purpose]} onEdit={() => setStep(2)} />
                 <Row label="Budget" value={Number(budget) > 0 ? money(Number(budget), currency) : "Set later"} onEdit={() => setStep(3)} />
                 <Row label="Work" value={workAnswered && work.enabled ? describeSchedule(work) : "Not working"} onEdit={() => setStep(4)} />
               </dl>
-              <p className="text-[13px] text-muted-foreground">We’ll add budget categories and a starter packing list. Everything is editable.</p>
+              <p className="text-[14px] text-muted-foreground">We’ll add budget categories and a starter packing list. Everything is editable.</p>
             </div>
           </section>
         )}
@@ -316,7 +316,7 @@ export function NewTripFlow() {
         )}
       </main>
 
-      <footer className="fixed inset-x-0 bottom-0 border-t bg-background/95 backdrop-blur">
+      <footer className="fixed inset-x-0 bottom-0 border-t bg-surface/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-xl gap-2 px-5 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
           {optional && step < 5 && (
             <Button variant="ghost" size="lg" onClick={skip}>
@@ -340,10 +340,10 @@ export function NewTripFlow() {
 
 function Row({ label, value, onEdit }: { label: string; value: string; onEdit: () => void }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-3">
+    <div className="flex min-h-13 items-center justify-between gap-3 px-4 py-2.5">
       <dt className="w-20 shrink-0 text-muted-foreground">{label}</dt>
       <dd className="min-w-0 flex-1 truncate">{value}</dd>
-      <button type="button" onClick={onEdit} className="text-[13px] font-medium text-muted-foreground hover:text-foreground">
+      <button type="button" onClick={onEdit} className="-mr-2 h-9 rounded-lg px-2 text-[14px] font-medium text-accent-foreground hover:bg-accent-soft">
         Edit
       </button>
     </div>

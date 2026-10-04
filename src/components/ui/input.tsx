@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export const inputClass =
-  "flex h-11 w-full min-w-0 rounded-md border border-input bg-surface px-3 text-[15px] lg:h-10 lg:text-sm shadow-[0_1px_0_0_rgb(0_0_0/0.02)] outline-none transition-[border-color,box-shadow] placeholder:text-subtle-foreground focus-visible:border-border-strong focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-50 aria-invalid:border-danger aria-invalid:ring-danger/15";
+  "flex h-12 w-full min-w-0 rounded-xl border border-input bg-surface px-3.5 text-[16px] lg:h-10 lg:rounded-lg lg:text-sm outline-none transition-[border-color,box-shadow] placeholder:text-subtle-foreground focus-visible:border-accent focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-50 aria-invalid:border-danger aria-invalid:ring-danger/15";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className, type, ...props }, ref) => (
@@ -13,7 +13,7 @@ Input.displayName = "Input";
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
   ({ className, ...props }, ref) => (
-    <textarea ref={ref} className={cn(inputClass, "min-h-20 py-2.5 h-auto resize-none", className)} {...props} />
+    <textarea ref={ref} className={cn(inputClass, "min-h-20 py-3 h-auto resize-none lg:py-2.5", className)} {...props} />
   ),
 );
 Textarea.displayName = "Textarea";
@@ -47,7 +47,7 @@ export const MoneyInput = React.forwardRef<
   React.InputHTMLAttributes<HTMLInputElement> & { symbol?: string }
 >(({ className, symbol = "₹", ...props }, ref) => (
   <div className="relative">
-    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[15px] lg:text-sm">
+    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-[16px] lg:text-sm">
       {symbol}
     </span>
     <input
@@ -56,7 +56,7 @@ export const MoneyInput = React.forwardRef<
       inputMode="decimal"
       min={0}
       step="1"
-      className={cn(inputClass, "pl-7 tabular", className)}
+      className={cn(inputClass, "pl-8 tabular", className)}
       {...props}
     />
   </div>

@@ -1,62 +1,53 @@
 "use client";
 
 import Link from "next/link";
-import { CircleUserRound, ListChecks, Plus, Settings } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useActiveTrip, useData } from "@/lib/store/hooks";
-import { setActiveTrip } from "@/lib/store/actions";
+import { usePathname } from "next/navigation";
+import { ListChecks, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { LogoMark } from "./logo";
+import { TripPill } from "./trip-switcher";
 
-/** Mobile-only overflow: utilities + trip switching (desktop has them in the sidebar). */
-export function MobileMenu() {
-  const data = useData();
-  const trip = useActiveTrip();
+/** Mobile-only utilities: checklist and settings (desktop has them in the sidebar). */
+export function MobileUtilities({ inverted }: { inverted?: boolean }) {
+  const path = usePathname();
+  const cls = (active: boolean) =>
+    cn(
+      "grid size-10 place-content-center rounded-full outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring",
+      inverted ? "bg-white/12 text-white hover:bg-white/20" : "card text-foreground/80 hover:bg-muted",
+      active && !inverted && "text-accent-foreground",
+    );
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label="Menu"
-        className="grid size-10 place-content-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring lg:hidden"
-      >
-        <CircleUserRound className="size-[22px]" strokeWidth={1.8} />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuItem asChild>
-          <Link href="/checklist">
-            <ListChecks /> Checklist
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/settings">
-            <Settings /> Settings
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>Switch trip</DropdownMenuLabel>
-        {data.trips.map((t) => (
-          <DropdownMenuItem key={t.id} onSelect={() => setActiveTrip(t.id)} className={cn(t.id === trip?.id && "font-medium")}>
-            <span>{t.coverEmoji ?? "🧭"}</span>
-            <span className="truncate">{t.name}</span>
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuItem asChild>
-          <Link href="/new">
-            <Plus /> New trip
-          </Link>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-2 lg:hidden">
+      <Link href="/checklist" aria-label="Checklist" className={cls(path.startsWith("/checklist"))}>
+        <ListChecks className="size-[19px]" />
+      </Link>
+      <Link href="/settings" aria-label="Settings" className={cls(path.startsWith("/settings"))}>
+        <Settings className="size-[19px]" />
+      </Link>
+    </div>
+  );
+}
+
+/** Top bar used on phones above every screen: trip switcher left, utilities right. */
+export function MobileTopBar({ inverted, className }: { inverted?: boolean; className?: string }) {
+  return (
+    <div className={cn("flex h-14 items-center justify-between gap-3 lg:hidden", className)}>
+      <TripPill inverted={inverted} />
+      <MobileUtilities inverted={inverted} />
+    </div>
   );
 }
 
 export function PageHeader({
   title,
-  eyebrow,
+  description,
   actions,
   className,
   children,
 }: {
   title?: React.ReactNode;
+  /** One quiet line under the title. */
+  description?: React.ReactNode;
+  /** Deprecated visual label; kept for call-site compatibility, not rendered. */
   eyebrow?: React.ReactNode;
   actions?: React.ReactNode;
   className?: string;
@@ -64,16 +55,13 @@ export function PageHeader({
 }) {
   return (
     <header className={cn("pt-safe", className)}>
-      <div className="flex min-h-14 items-center gap-3 pt-2 lg:min-h-0 lg:pt-8">
-        <LogoMark className="size-7 shrink-0 lg:hidden" />
-        <div className="min-w-0 flex-1">
-          {eyebrow && <div className="eyebrow hidden lg:block">{eyebrow}</div>}
-          {title && <h1 className="truncate text-[20px] font-semibold tracking-tight lg:text-[22px]">{title}</h1>}
+      <MobileTopBar className="pt-2" />
+      <div className="mt-4 flex items-end justify-between gap-3 lg:mt-0 lg:pt-10">
+        <div className="min-w-0">
+          {title && <h1 className="truncate text-[28px] font-semibold leading-tight tracking-tight lg:text-[30px]">{title}</h1>}
+          {description && <p className="mt-1 text-[15px] text-muted-foreground">{description}</p>}
         </div>
-        <div className="flex items-center gap-1">
-          {actions}
-          <MobileMenu />
-        </div>
+        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
       {children}
     </header>

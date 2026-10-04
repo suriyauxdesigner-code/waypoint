@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Archive, Plus } from "lucide-react";
+import { Archive, Plus, Wallet } from "lucide-react";
+import { BudgetBar } from "@/components/common/money";
 import { ResponsiveSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/label";
@@ -69,8 +70,10 @@ export function BudgetSheet({ onClose }: { onClose: () => void }) {
       open={open}
       onOpenChange={close}
       wide
-      title="Budget"
-      description="Set the trip total and plan how it splits across categories."
+      title="Plan your budget"
+      description="Set a total, then split it across categories"
+      icon={Wallet}
+      iconTone="accent"
       footer={
         <Button size="lg" className="lg:h-10" onClick={save}>
           Save budget
@@ -79,20 +82,23 @@ export function BudgetSheet({ onClose }: { onClose: () => void }) {
     >
       <div className="grid grid-cols-1 gap-5">
         <Field label="Trip budget" htmlFor="b-total" error={error}>
-          <MoneyInput id="b-total" symbol={symbol} value={total} onChange={(e) => setTotal(e.target.value)} className="text-[18px] font-semibold lg:text-[16px]" />
+          <MoneyInput id="b-total" symbol={symbol} value={total} onChange={(e) => setTotal(e.target.value)} className="h-14 text-[22px] font-semibold lg:h-12 lg:text-[18px]" />
         </Field>
-        <p className={diff === 0 ? "text-[13px] text-positive" : "text-[13px] text-muted-foreground"}>
+        <div>
+          <BudgetBar budget={totalN} spent={Math.min(allocated, totalN)} />
+          <p className={diff === 0 ? "mt-2 text-[14px] text-positive" : diff < 0 ? "mt-2 text-[14px] text-danger" : "mt-2 text-[14px] text-muted-foreground"}>
           {diff === 0
             ? "Every rupee is planned."
             : diff > 0
               ? `${money(diff, trip.currency)} not yet assigned to a category.`
               : `Categories add up to ${money(-diff, trip.currency)} more than the trip budget.`}
-        </p>
-        <div className="divide-y rounded-lg border">
+          </p>
+        </div>
+        <div className="divide-y rounded-2xl border">
           {active.map((c) => (
-            <div key={c.id} className="grid grid-cols-[auto_1fr_110px_auto] items-center gap-2 px-2.5 py-2 sm:grid-cols-[auto_1fr_120px_110px_auto]">
+            <div key={c.id} className="grid grid-cols-[auto_minmax(0,1fr)_104px_auto] items-center gap-2 px-2 py-2 sm:grid-cols-[auto_minmax(0,1fr)_130px_120px_auto]">
               <DropdownMenu>
-                <DropdownMenuTrigger aria-label={`Icon for ${c.name || "category"}`} className="grid size-10 place-content-center rounded-md border bg-surface hover:bg-muted">
+                <DropdownMenuTrigger aria-label={`Icon for ${c.name || "category"}`} className="grid size-10 place-content-center rounded-full bg-muted hover:bg-border">
                   <CategoryIcon icon={c.icon} className="size-4 text-muted-foreground" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="grid min-w-0 grid-cols-5 gap-0.5">
@@ -103,7 +109,7 @@ export function BudgetSheet({ onClose }: { onClose: () => void }) {
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Input aria-label="Category name" placeholder="Category" value={c.name} onChange={(e) => setCats((cs) => cs.map((x) => (x.id === c.id ? { ...x, name: e.target.value } : x)))} />
+              <Input aria-label="Category name" placeholder="Category" className="border-transparent bg-transparent px-1.5 font-medium focus-visible:border-accent lg:px-2" value={c.name} onChange={(e) => setCats((cs) => cs.map((x) => (x.id === c.id ? { ...x, name: e.target.value } : x)))} />
               <Select
                 aria-label={`${c.name} type`}
                 className="hidden sm:block"
@@ -126,7 +132,7 @@ export function BudgetSheet({ onClose }: { onClose: () => void }) {
         >
           <Plus /> Add category
         </Button>
-        <p className="text-[12px] text-subtle-foreground">Archived categories keep their past expenses — they just stop appearing in pickers.</p>
+        <p className="text-[13px] text-muted-foreground">Archived categories keep their past expenses — they just stop appearing in pickers.</p>
       </div>
     </ResponsiveSheet>
   );
